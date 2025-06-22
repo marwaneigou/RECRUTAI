@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
-import { 
+import CandidateCV from './CandidateCV';
+import {
   DocumentTextIcon,
   UserIcon,
   CalendarIcon,
@@ -16,7 +17,9 @@ const JobOffers = () => {
   const { user } = useAuth();
   const [offers, setOffers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all'); // all, pending, accepted, rejected
+  const [filter, setFilter] = useState('all');
+  const [selectedCandidate, setSelectedCandidate] = useState(null);
+  const [showCandidateCV, setShowCandidateCV] = useState(false); // all, pending, accepted, rejected
 
   useEffect(() => {
     fetchJobOffers();
@@ -67,17 +70,27 @@ const JobOffers = () => {
     try {
       // This would be the actual API call
       // await api.put(`/applications/${offerId}`, { status: newStatus });
-      
+
       // For now, update locally
-      setOffers(prev => prev.map(offer => 
+      setOffers(prev => prev.map(offer =>
         offer.id === offerId ? { ...offer, status: newStatus } : offer
       ));
-      
+
       toast.success(`Application ${newStatus} successfully`);
     } catch (error) {
       console.error('Error updating application status:', error);
       toast.error('Failed to update application status');
     }
+  };
+
+  const viewCandidateCV = (candidate) => {
+    setSelectedCandidate(candidate);
+    setShowCandidateCV(true);
+  };
+
+  const closeCandidateCV = () => {
+    setSelectedCandidate(null);
+    setShowCandidateCV(false);
   };
 
   const filteredOffers = offers.filter(offer => {
@@ -245,9 +258,16 @@ const JobOffers = () => {
                 {/* Actions */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <button className="flex items-center px-3 py-1 text-sm text-blue-600 hover:text-blue-800 transition-colors">
-                      <EyeIcon className="h-4 w-4 mr-1" />
-                      View Resume
+                    <button
+                      onClick={() => viewCandidateCV({
+                        id: offer.candidateId || offer.id,
+                        name: offer.candidateName,
+                        email: offer.candidateEmail
+                      })}
+                      className="flex items-center px-3 py-1 text-sm text-blue-600 hover:text-blue-800 transition-colors"
+                    >
+                      <DocumentTextIcon className="h-4 w-4 mr-1" />
+                      View CV
                     </button>
                     <button className="flex items-center px-3 py-1 text-sm text-blue-600 hover:text-blue-800 transition-colors">
                       <UserIcon className="h-4 w-4 mr-1" />
@@ -276,6 +296,15 @@ const JobOffers = () => {
             </div>
           ))}
         </div>
+      )}
+
+      {/* Candidate CV Modal */}
+      {showCandidateCV && selectedCandidate && (
+        <CandidateCV
+          candidateId={selectedCandidate.id}
+          candidateName={selectedCandidate.name}
+          onClose={closeCandidateCV}
+        />
       )}
     </div>
   );

@@ -67,6 +67,8 @@ docker exec smart_recruit_postgres psql -U smart_admin -d smart_recruit -c "CREA
 
 docker exec smart_recruit_postgres psql -U smart_admin -d smart_recruit -c "CREATE TABLE job_skills (id SERIAL PRIMARY KEY, job_id INTEGER REFERENCES jobs(id) ON DELETE CASCADE, skill_id INTEGER REFERENCES skills(id) ON DELETE CASCADE, required_level \"ProficiencyLevel\" NOT NULL, is_required BOOLEAN DEFAULT true, weight DECIMAL(3,2) DEFAULT 1.0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, UNIQUE(job_id, skill_id));"
 
+docker exec smart_recruit_postgres psql -U smart_admin -d smart_recruit -c "CREATE TABLE cv_data (id SERIAL PRIMARY KEY, candidate_id INTEGER UNIQUE REFERENCES candidates(id) ON DELETE CASCADE, selected_template VARCHAR(255) DEFAULT 'modern', first_name VARCHAR(255), last_name VARCHAR(255), email VARCHAR(255), phone VARCHAR(255), address VARCHAR(255), city VARCHAR(255), country VARCHAR(255), linkedin_url VARCHAR(255), github_url VARCHAR(255), portfolio_url VARCHAR(255), professional_summary TEXT, technical_skills TEXT, soft_skills TEXT, languages TEXT, work_experience JSONB, education JSONB, projects JSONB, certifications JSONB, is_complete BOOLEAN DEFAULT false, last_generated TIMESTAMP, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);"
+
 echo.
 echo 🧹 Step 4: Cleaning Prisma Cache...
 echo ==================================
@@ -115,9 +117,14 @@ docker exec smart_recruit_postgres psql -U smart_admin -d smart_recruit -c "INSE
 docker exec smart_recruit_postgres psql -U smart_admin -d smart_recruit -c "INSERT INTO jobs (employer_id, title, description, requirements, responsibilities, location, employment_type, experience_level, salary_min, salary_max, currency, remote_allowed, is_active) SELECT e.id, 'Frontend React Developer', 'Join our frontend team to build amazing user interfaces with React and modern JavaScript.', '3+ years of React experience, knowledge of TypeScript, CSS, and modern frontend tools.', 'Build responsive web applications, optimize performance, work with designers and backend developers.', 'Paris, France', 'full-time', 'mid', 40000.00, 55000.00, 'EUR', true, true FROM employers e WHERE e.company_name = 'TechCorp Solutions';"
 
 echo.
-echo 📊 Step 8: Verifying Setup...
+echo 🎨 Step 8: Creating CV Data...
+echo =============================
+docker exec smart_recruit_postgres psql -U smart_admin -d smart_recruit -c "INSERT INTO cv_data (candidate_id, selected_template, first_name, last_name, email, phone, city, country, linkedin_url, github_url, professional_summary, technical_skills, soft_skills, languages, work_experience, education, projects, certifications, is_complete) SELECT c.id, 'modern', 'Ahmed', 'Ben Ali', 'ahmed.benali@email.com', '+33123456789', 'Paris', 'France', 'https://linkedin.com/in/ahmed-benali', 'https://github.com/ahmed-benali', 'Experienced Full Stack Developer with 5+ years of expertise in React, Node.js, and cloud technologies. Passionate about creating scalable web applications and leading development teams.', 'JavaScript, React.js, Node.js, Python, PostgreSQL, MongoDB, AWS, Docker, Git', 'Leadership, Problem Solving, Team Collaboration, Agile Methodologies, Communication', 'French (Native), English (Fluent), Arabic (Conversational)', '[{\"id\": 1, \"jobTitle\": \"Senior Full Stack Developer\", \"company\": \"Tech Solutions Inc.\", \"location\": \"Paris, France\", \"startDate\": \"2022-01\", \"endDate\": \"\", \"current\": true, \"description\": \"Lead development of scalable web applications using React and Node.js. Manage a team of 4 developers and collaborate with product managers to deliver high-quality software solutions.\"}]', '[{\"id\": 1, \"degree\": \"Master of Computer Science\", \"institution\": \"École Polytechnique\", \"location\": \"Paris, France\", \"graduationDate\": \"2019-06\", \"gpa\": \"3.8/4.0\", \"description\": \"Specialized in Software Engineering and Artificial Intelligence\"}]', '[{\"id\": 1, \"name\": \"E-commerce Platform\", \"description\": \"Full-stack e-commerce platform with React frontend and Node.js backend\", \"technologies\": \"React, Node.js, PostgreSQL, Stripe API\", \"url\": \"https://github.com/ahmed-benali/ecommerce\"}]', '[{\"id\": 1, \"name\": \"AWS Certified Solutions Architect\", \"issuer\": \"Amazon Web Services\", \"date\": \"2023-03\", \"url\": \"https://aws.amazon.com/certification/\"}]', true FROM candidates c WHERE c.first_name = 'Ahmed';"
+
+echo.
+echo 📊 Step 9: Verifying Setup...
 echo ============================
-docker exec smart_recruit_postgres psql -U smart_admin -d smart_recruit -c "SELECT 'Users' as table_name, COUNT(*) as count FROM users UNION ALL SELECT 'Candidates', COUNT(*) FROM candidates UNION ALL SELECT 'Employers', COUNT(*) FROM employers UNION ALL SELECT 'Jobs', COUNT(*) FROM jobs UNION ALL SELECT 'Skills', COUNT(*) FROM skills;"
+docker exec smart_recruit_postgres psql -U smart_admin -d smart_recruit -c "SELECT 'Users' as table_name, COUNT(*) as count FROM users UNION ALL SELECT 'Candidates', COUNT(*) FROM candidates UNION ALL SELECT 'Employers', COUNT(*) FROM employers UNION ALL SELECT 'Jobs', COUNT(*) FROM jobs UNION ALL SELECT 'Skills', COUNT(*) FROM skills UNION ALL SELECT 'CV Data', COUNT(*) FROM cv_data;"
 
 echo.
 echo 📊 Checking Demo Users...
@@ -142,6 +149,7 @@ echo ✅ 1 Candidate profile (Ahmed Ben Ali)
 echo ✅ 1 Employer profile (TechCorp Solutions)
 echo ✅ 2 Sample job postings
 echo ✅ 10 Sample skills
+echo ✅ 1 Complete CV data (Ahmed's professional CV)
 echo.
 echo 💡 Next Steps:
 echo =============

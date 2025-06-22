@@ -5,6 +5,7 @@ import CandidateProfile from '../candidates/CandidateProfile'
 import JobSearch from '../candidates/JobSearch'
 import Applications from '../candidates/Applications'
 import Resume from '../candidates/Resume'
+import CVBuilder from '../candidates/CVBuilder'
 import api from '../../services/api'
 import toast from 'react-hot-toast'
 import {
@@ -14,12 +15,13 @@ import {
   BellIcon,
   MagnifyingGlassIcon,
   CloudArrowUpIcon,
-  UserIcon
+  UserIcon,
+  SparklesIcon
 } from '@heroicons/react/24/outline'
 
 const CandidateDashboard = () => {
   const { user } = useAuth()
-  const [currentView, setCurrentView] = useState('dashboard') // dashboard, profile, jobSearch, applications, resume
+  const [currentView, setCurrentView] = useState('dashboard') // dashboard, profile, jobSearch, applications, resume, cvBuilder
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -99,6 +101,19 @@ const CandidateDashboard = () => {
         onViewChange={setCurrentView}
       >
         <Resume />
+      </DashboardLayout>
+    )
+  }
+
+  if (currentView === 'cvBuilder') {
+    return (
+      <DashboardLayout
+        title="CV Builder"
+        user={user}
+        currentView={currentView}
+        onViewChange={setCurrentView}
+      >
+        <CVBuilder />
       </DashboardLayout>
     )
   }
@@ -304,7 +319,15 @@ const CandidateDashboard = () => {
             <h3 className="text-lg font-medium text-gray-900">Quick Actions</h3>
           </div>
           <div className="card-body">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              <button
+                onClick={() => setCurrentView('cvBuilder')}
+                className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition-colors"
+              >
+                <SparklesIcon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                <p className="text-sm font-medium text-gray-900">Build CV</p>
+                <p className="text-xs text-gray-500">Create professional CV</p>
+              </button>
               <button
                 onClick={() => setCurrentView('resume')}
                 className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"

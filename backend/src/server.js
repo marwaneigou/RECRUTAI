@@ -5,6 +5,7 @@ const morgan = require('morgan')
 const compression = require('compression')
 const cookieParser = require('cookie-parser')
 const rateLimit = require('express-rate-limit')
+const path = require('path')
 require('express-async-errors')
 require('dotenv').config()
 
@@ -21,6 +22,7 @@ const candidateRoutes = require('./routes/candidates')
 const employerRoutes = require('./routes/employers')
 const skillRoutes = require('./routes/skills')
 const notificationRoutes = require('./routes/notifications')
+const cvRoutes = require('./routes/cv')
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -67,6 +69,10 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 app.use(cookieParser())
 app.use(limiter)
 
+// Serve static files
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')))
+app.use('/temp', express.static(path.join(__dirname, '../temp')))
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({
@@ -98,6 +104,7 @@ app.use('/api/candidates', candidateRoutes)
 app.use('/api/employers', employerRoutes)
 app.use('/api/skills', skillRoutes)
 app.use('/api/notifications', notificationRoutes)
+app.use('/api/candidates', cvRoutes)
 
 // Swagger documentation (only in development)
 if (process.env.NODE_ENV === 'development' && process.env.ENABLE_SWAGGER === 'true') {

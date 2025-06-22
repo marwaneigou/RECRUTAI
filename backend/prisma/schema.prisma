@@ -80,8 +80,52 @@ model Candidate {
   user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   applications     Application[]
   candidateSkills  CandidateSkill[]
+  cvData           CvData?
 
   @@map("candidates")
+}
+
+model CvData {
+  id                   Int      @id @default(autoincrement())
+  candidateId          Int      @unique @map("candidate_id")
+  selectedTemplate     String   @default("modern") @map("selected_template") // modern, classic, creative
+
+  // Personal Information
+  firstName            String?  @map("first_name")
+  lastName             String?  @map("last_name")
+  email                String?
+  phone                String?
+  address              String?
+  city                 String?
+  country              String?
+  linkedinUrl          String?  @map("linkedin_url")
+  githubUrl            String?  @map("github_url")
+  portfolioUrl         String?  @map("portfolio_url")
+
+  // Professional Summary
+  professionalSummary  String?  @map("professional_summary")
+
+  // Skills
+  technicalSkills      String?  @map("technical_skills")
+  softSkills           String?  @map("soft_skills")
+  languages            String?
+
+  // Additional Data stored as JSON
+  workExperience       Json?    @map("work_experience") // Array of work experience objects
+  education            Json?    // Array of education objects
+  projects             Json?    // Array of project objects
+  certifications       Json?    // Array of certification objects
+
+  // CV Status
+  isComplete           Boolean  @default(false) @map("is_complete")
+  lastGenerated        DateTime? @map("last_generated")
+
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  candidate            Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@map("cv_data")
 }
 
 model Job {

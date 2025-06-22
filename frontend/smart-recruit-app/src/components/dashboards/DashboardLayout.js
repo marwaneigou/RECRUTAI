@@ -41,6 +41,7 @@ const DashboardLayout = ({ children, title, currentView, onViewChange }) => {
         { name: 'Job Search', view: 'jobSearch', icon: MagnifyingGlassIcon, current: currentView === 'jobSearch' },
         { name: 'Applications', view: 'applications', icon: DocumentTextIcon, current: currentView === 'applications' },
         { name: 'Resume', view: 'resume', icon: DocumentTextIcon, current: currentView === 'resume' },
+        { name: 'CV Builder', view: 'cvBuilder', icon: DocumentTextIcon, current: currentView === 'cvBuilder' },
         { name: 'Profile', view: 'profile', icon: UserIcon, current: currentView === 'profile' },
         { name: 'Settings', view: 'settings', icon: Cog6ToothIcon, current: currentView === 'settings' },
       ]
