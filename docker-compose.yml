@@ -1,0 +1,211 @@
+version: '3.8'
+
+services:
+  # Analysis Service
+  analysis-service:
+    build:
+      context: ./services/analysis-service
+      dockerfile: Dockerfile
+    ports:
+      - "5002:5002"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - FLASK_ENV=production
+      - LOG_LEVEL=INFO
+    env_file:
+      - ./services/.env.global
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - recrutai-network
+
+  # Matching Service
+  matching-service:
+    build:
+      context: ./services/matching-service
+      dockerfile: Dockerfile
+    ports:
+      - "5001:5001"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - FLASK_ENV=production
+      - LOG_LEVEL=INFO
+    env_file:
+      - ./services/.env.global
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - recrutai-network
+
+  # Document Service
+  document-service:
+    build:
+      context: ./services/document-service
+      dockerfile: Dockerfile
+    ports:
+      - "5003:5003"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - FLASK_ENV=production
+      - LOG_LEVEL=INFO
+    env_file:
+      - ./services/.env.global
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - recrutai-network
+
+  # Recommendation Service
+  recommendation-service:
+    build:
+      context: ./services/recommendation-service
+      dockerfile: Dockerfile
+    ports:
+      - "5004:5004"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - FLASK_ENV=production
+      - LOG_LEVEL=INFO
+    env_file:
+      - ./services/.env.global
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5004/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - recrutai-network
+
+  # User Management Service
+  user-management-service:
+    build:
+      context: ./services/user-management-service
+      dockerfile: Dockerfile
+    ports:
+      - "5005:5005"
+    environment:
+      - FLASK_ENV=production
+      - LOG_LEVEL=INFO
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - SECRET_KEY=${SECRET_KEY}
+    env_file:
+      - ./services/.env.global
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5005/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - recrutai-network
+
+  # Notification Service
+  notification-service:
+    build:
+      context: ./services/notification-service
+      dockerfile: Dockerfile
+    ports:
+      - "5006:5006"
+    environment:
+      - FLASK_ENV=production
+      - LOG_LEVEL=INFO
+      - EMAIL_USER=${EMAIL_USER}
+      - EMAIL_PASSWORD=${EMAIL_PASSWORD}
+      - SMTP_SERVER=${SMTP_SERVER}
+      - SMTP_PORT=${SMTP_PORT}
+    env_file:
+      - ./services/.env.global
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5006/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - recrutai-network
+
+  # MongoDB for data storage
+  mongodb:
+    image: mongo:5.0
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=recrutai
+      - MONGO_INITDB_ROOT_PASSWORD=recrutai123
+      - MONGO_INITDB_DATABASE=recrutai
+    volumes:
+      - mongodb_data:/data/db
+      - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+    restart: unless-stopped
+    networks:
+      - recrutai-network
+
+  # PostgreSQL for structured data
+  postgresql:
+    image: postgres:13
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=recrutai
+      - POSTGRES_USER=recrutai
+      - POSTGRES_PASSWORD=recrutai123
+    volumes:
+      - postgresql_data:/var/lib/postgresql/data
+      - ./init-postgres.sql:/docker-entrypoint-initdb.d/init-postgres.sql:ro
+    restart: unless-stopped
+    networks:
+      - recrutai-network
+
+  # Redis for caching
+  redis:
+    image: redis:6-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - recrutai-network
+
+  # Nginx reverse proxy
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - analysis-service
+      - matching-service
+      - document-service
+      - recommendation-service
+      - user-management-service
+      - notification-service
+    restart: unless-stopped
+    networks:
+      - recrutai-network
+
+volumes:
+  mongodb_data:
+  postgresql_data:
+  redis_data:
+
+networks:
+  recrutai-network:
+    driver: bridge
