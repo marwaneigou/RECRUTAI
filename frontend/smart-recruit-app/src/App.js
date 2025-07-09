@@ -3,13 +3,31 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import ProtectedRoute from './components/auth/ProtectedRoute'
-import LoginForm from './components/auth/LoginForm'
-import RegisterForm from './components/auth/RegisterForm'
-import CandidateDashboard from './components/dashboards/CandidateDashboard'
-import EmployerDashboard from './components/dashboards/EmployerDashboard'
-import AdminDashboard from './components/dashboards/AdminDashboard'
-import LandingPage from './components/pages/LandingPage'
 import LoadingSpinner from './components/common/LoadingSpinner'
+
+// Page Components
+import HomePage from './pages/public/HomePage'
+import LoginPage from './pages/auth/LoginPage'
+import RegisterPage from './pages/auth/RegisterPage'
+
+// Candidate Pages
+import CandidateDashboardPage from './pages/candidate/DashboardPage'
+import JobSearchPage from './pages/candidate/JobSearchPage'
+import ApplicationsPage from './pages/candidate/ApplicationsPage'
+import ResumePage from './pages/candidate/ResumePage'
+import CVBuilderPage from './pages/candidate/CVBuilderPage'
+import CandidateSettingsPage from './pages/candidate/SettingsPage'
+
+// Employer Pages
+import EmployerDashboard from './components/dashboards/EmployerDashboard'
+import JobsPage from './pages/employer/JobsPage'
+import CandidatesPage from './pages/employer/CandidatesPage'
+import EmployerSettingsPage from './pages/employer/SettingsPage'
+import AdminDashboard from './components/dashboards/AdminDashboard'
+
+// Layouts
+import CandidateLayout from './layouts/CandidateLayout'
+import EmployerLayout from './layouts/EmployerLayout'
 
 // Component to handle authenticated redirects
 const AuthenticatedRedirect = () => {
@@ -37,8 +55,8 @@ const AuthenticatedRedirect = () => {
     }
   }
 
-  // Not authenticated, show landing page
-  return <LandingPage />
+  // Not authenticated, show home page
+  return <HomePage />
 }
 
 // Main App component
@@ -48,30 +66,42 @@ const AppContent = () => {
       <Routes>
         {/* Public routes */}
         <Route path="/" element={<AuthenticatedRedirect />} />
-        <Route path="/login" element={<LoginForm />} />
-        <Route path="/register" element={<RegisterForm />} />
-        
-        {/* Protected routes - Candidate */}
-        <Route
-          path="/candidate/dashboard"
-          element={
-            <ProtectedRoute requiredRoles={['candidate']}>
-              <CandidateDashboard />
-            </ProtectedRoute>
-          }
-        />
-        
-        {/* Protected routes - Employer */}
-        <Route
-          path="/employer/dashboard"
-          element={
-            <ProtectedRoute requiredRoles={['employer']}>
-              <EmployerDashboard />
-            </ProtectedRoute>
-          }
-        />
-        
-        {/* Protected routes - Admin */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+
+        {/* Candidate routes with layout */}
+        <Route path="/candidate/*" element={
+          <ProtectedRoute requiredRoles={['candidate']}>
+            <CandidateLayout>
+              <Routes>
+                <Route path="dashboard" element={<CandidateDashboardPage />} />
+                <Route path="jobs" element={<JobSearchPage />} />
+                <Route path="applications" element={<ApplicationsPage />} />
+                <Route path="resume" element={<ResumePage />} />
+                <Route path="cv-builder" element={<CVBuilderPage />} />
+                <Route path="settings" element={<CandidateSettingsPage />} />
+                <Route path="" element={<Navigate to="dashboard" replace />} />
+              </Routes>
+            </CandidateLayout>
+          </ProtectedRoute>
+        } />
+
+        {/* Employer routes with layout */}
+        <Route path="/employer/*" element={
+          <ProtectedRoute requiredRoles={['employer']}>
+            <EmployerLayout>
+              <Routes>
+                <Route path="dashboard" element={<EmployerDashboard />} />
+                <Route path="jobs" element={<JobsPage />} />
+                <Route path="candidates" element={<CandidatesPage />} />
+                <Route path="settings" element={<EmployerSettingsPage />} />
+                <Route path="" element={<Navigate to="dashboard" replace />} />
+              </Routes>
+            </EmployerLayout>
+          </ProtectedRoute>
+        } />
+
+        {/* Admin routes */}
         <Route
           path="/admin/dashboard"
           element={
@@ -80,7 +110,7 @@ const AppContent = () => {
             </ProtectedRoute>
           }
         />
-        
+
         {/* Generic dashboard route */}
         <Route
           path="/dashboard"

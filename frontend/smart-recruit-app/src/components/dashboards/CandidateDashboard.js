@@ -1,11 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
-import DashboardLayout from './DashboardLayout'
-import CandidateProfile from '../candidates/CandidateProfile'
-import JobSearch from '../candidates/JobSearch'
-import Applications from '../candidates/Applications'
-import Resume from '../candidates/Resume'
-import CVBuilder from '../candidates/CVBuilder'
+import { useNavigate } from 'react-router-dom'
+import JobDetailsModal from '../common/JobDetailsModal'
 import api from '../../services/api'
 import toast from 'react-hot-toast'
 import {
@@ -21,9 +17,11 @@ import {
 
 const CandidateDashboard = () => {
   const { user } = useAuth()
-  const [currentView, setCurrentView] = useState('dashboard') // dashboard, profile, jobSearch, applications, resume, cvBuilder
+  const navigate = useNavigate()
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [selectedJob, setSelectedJob] = useState(null)
+  const [showJobDetails, setShowJobDetails] = useState(false)
 
   useEffect(() => {
     fetchCandidateStats()
@@ -52,71 +50,7 @@ const CandidateDashboard = () => {
     }
   }
 
-  // Handle different views
-  if (currentView === 'profile') {
-    return (
-      <DashboardLayout
-        title="My Profile"
-        user={user}
-        currentView={currentView}
-        onViewChange={setCurrentView}
-      >
-        <CandidateProfile />
-      </DashboardLayout>
-    )
-  }
-
-  if (currentView === 'jobSearch') {
-    return (
-      <DashboardLayout
-        title="Job Search"
-        user={user}
-        currentView={currentView}
-        onViewChange={setCurrentView}
-      >
-        <JobSearch />
-      </DashboardLayout>
-    )
-  }
-
-  if (currentView === 'applications') {
-    return (
-      <DashboardLayout
-        title="My Applications"
-        user={user}
-        currentView={currentView}
-        onViewChange={setCurrentView}
-      >
-        <Applications />
-      </DashboardLayout>
-    )
-  }
-
-  if (currentView === 'resume') {
-    return (
-      <DashboardLayout
-        title="My Resumes"
-        user={user}
-        currentView={currentView}
-        onViewChange={setCurrentView}
-      >
-        <Resume />
-      </DashboardLayout>
-    )
-  }
-
-  if (currentView === 'cvBuilder') {
-    return (
-      <DashboardLayout
-        title="CV Builder"
-        user={user}
-        currentView={currentView}
-        onViewChange={setCurrentView}
-      >
-        <CVBuilder />
-      </DashboardLayout>
-    )
-  }
+  // Dashboard content only (no view switching)
 
   // Main dashboard view
   const statsData = [
@@ -185,7 +119,17 @@ const CandidateDashboard = () => {
       location: 'Toulouse, France',
       matchScore: 94,
       salary: '45k - 60k €',
-      remote: true
+      salaryMin: 45,
+      salaryMax: 60,
+      currency: 'EUR',
+      employmentType: 'Full-time',
+      experienceLevel: 'Senior',
+      remote: true,
+      description: 'Join our AI team to develop cutting-edge machine learning models. You will work on computer vision, NLP, and recommendation systems using Python, TensorFlow, and PyTorch.',
+      requirements: '• PhD or Master\'s in Computer Science, AI, or related field\n• 3+ years of experience in ML/AI\n• Proficiency in Python, TensorFlow, PyTorch\n• Experience with cloud platforms (AWS, GCP)',
+      skills: ['Python', 'TensorFlow', 'PyTorch', 'Machine Learning', 'Deep Learning'],
+      benefits: ['Stock options', 'Flexible hours', 'Remote work', 'Learning budget'],
+      createdAt: '2025-06-25T10:00:00Z'
     },
     {
       id: 2,
@@ -194,18 +138,32 @@ const CandidateDashboard = () => {
       location: 'Toulouse, France',
       matchScore: 87,
       salary: '42k - 57k €',
-      remote: true
+      salaryMin: 42,
+      salaryMax: 57,
+      currency: 'EUR',
+      employmentType: 'Full-time',
+      experienceLevel: 'Mid-level',
+      remote: true,
+      description: 'Develop and maintain scalable backend services using Python and Django. Work with modern technologies and agile methodologies.',
+      requirements: '• Bachelor\'s degree in Computer Science\n• 3+ years of Python development experience\n• Experience with Django/Flask\n• Knowledge of databases and APIs',
+      skills: ['Python', 'Django', 'PostgreSQL', 'REST APIs', 'Docker'],
+      benefits: ['Remote work', 'Flexible schedule', 'Tech allowance', 'Training budget'],
+      createdAt: '2025-06-24T14:30:00Z'
     }
   ]
 
+  const handleViewJobDetails = (job) => {
+    setSelectedJob(job)
+    setShowJobDetails(true)
+  }
+
+  const handleApplyToJob = (jobId) => {
+    // Handle job application
+    toast.success('Application submitted successfully!')
+  }
+
   return (
-    <DashboardLayout
-      title="Candidate Dashboard"
-      user={user}
-      currentView={currentView}
-      onViewChange={setCurrentView}
-    >
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Welcome Section */}
         <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg p-6 text-white">
           <h1 className="text-2xl font-bold mb-2">
@@ -259,7 +217,7 @@ const CandidateDashboard = () => {
               </div>
               <div className="mt-4">
                 <button
-                  onClick={() => setCurrentView('applications')}
+                  onClick={() => navigate('/candidate/applications')}
                   className="btn-outline w-full"
                 >
                   View All Applications
@@ -295,15 +253,25 @@ const CandidateDashboard = () => {
                       </div>
                     </div>
                     <div className="mt-3 flex space-x-2">
-                      <button className="btn-primary text-xs px-3 py-1">Apply Now</button>
-                      <button className="btn-outline text-xs px-3 py-1">View Details</button>
+                      <button
+                        onClick={() => handleApplyToJob(job.id)}
+                        className="btn-primary text-xs px-3 py-1"
+                      >
+                        Apply Now
+                      </button>
+                      <button
+                        onClick={() => handleViewJobDetails(job)}
+                        className="btn-outline text-xs px-3 py-1"
+                      >
+                        View Details
+                      </button>
                     </div>
                   </div>
                 ))}
               </div>
               <div className="mt-4">
                 <button
-                  onClick={() => setCurrentView('jobSearch')}
+                  onClick={() => navigate('/candidate/jobs')}
                   className="btn-outline w-full"
                 >
                   View All Jobs
@@ -321,7 +289,7 @@ const CandidateDashboard = () => {
           <div className="card-body">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
               <button
-                onClick={() => setCurrentView('cvBuilder')}
+                onClick={() => navigate('/candidate/cv-builder')}
                 className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition-colors"
               >
                 <SparklesIcon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
@@ -329,7 +297,7 @@ const CandidateDashboard = () => {
                 <p className="text-xs text-gray-500">Create professional CV</p>
               </button>
               <button
-                onClick={() => setCurrentView('resume')}
+                onClick={() => navigate('/candidate/resume')}
                 className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
               >
                 <CloudArrowUpIcon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
@@ -337,7 +305,7 @@ const CandidateDashboard = () => {
                 <p className="text-xs text-gray-500">Upload and update resumes</p>
               </button>
               <button
-                onClick={() => setCurrentView('jobSearch')}
+                onClick={() => navigate('/candidate/jobs')}
                 className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors"
               >
                 <MagnifyingGlassIcon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
@@ -345,26 +313,27 @@ const CandidateDashboard = () => {
                 <p className="text-xs text-gray-500">Find your next opportunity</p>
               </button>
               <button
-                onClick={() => setCurrentView('applications')}
+                onClick={() => navigate('/candidate/applications')}
                 className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors"
               >
                 <DocumentTextIcon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
                 <p className="text-sm font-medium text-gray-900">My Applications</p>
                 <p className="text-xs text-gray-500">Track application status</p>
               </button>
-              <button
-                onClick={() => setCurrentView('profile')}
-                className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition-colors"
-              >
-                <UserIcon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                <p className="text-sm font-medium text-gray-900">Update Profile</p>
-                <p className="text-xs text-gray-500">Keep your profile current</p>
-              </button>
+
             </div>
           </div>
         </div>
-      </div>
-    </DashboardLayout>
+
+      {/* Job Details Modal */}
+      <JobDetailsModal
+        job={selectedJob}
+        isOpen={showJobDetails}
+        onClose={() => setShowJobDetails(false)}
+        onApply={handleApplyToJob}
+        showApplyButton={true}
+      />
+    </div>
   )
 }
 

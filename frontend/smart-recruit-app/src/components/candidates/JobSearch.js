@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import JobDetailsModal from '../common/JobDetailsModal';
+import JobApplicationModal from './JobApplicationModal';
 import { 
   MagnifyingGlassIcon,
   MapPinIcon,
@@ -26,6 +28,10 @@ const JobSearch = () => {
   const [remoteFilter, setRemoteFilter] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
   const [savedJobs, setSavedJobs] = useState(new Set());
+  const [selectedJob, setSelectedJob] = useState(null);
+  const [showJobDetails, setShowJobDetails] = useState(false);
+  const [showApplicationModal, setShowApplicationModal] = useState(false);
+  const [jobToApply, setJobToApply] = useState(null);
 
   useEffect(() => {
     fetchJobs();
@@ -75,14 +81,19 @@ const JobSearch = () => {
     }
   };
 
-  const handleApplyToJob = async (jobId) => {
-    try {
-      // This would submit an application
-      toast.success('Application submitted successfully!');
-    } catch (error) {
-      console.error('Error applying to job:', error);
-      toast.error('Failed to submit application');
-    }
+  const handleApplyToJob = (job) => {
+    setJobToApply(job);
+    setShowApplicationModal(true);
+  };
+
+  const handleApplicationSubmitted = () => {
+    // Refresh jobs or update UI as needed
+    fetchJobs();
+  };
+
+  const handleViewJobDetails = (job) => {
+    setSelectedJob(job);
+    setShowJobDetails(true);
   };
 
   // Filter and sort jobs
@@ -333,12 +344,16 @@ const JobSearch = () => {
                   {/* Action Buttons */}
                   <div className="flex items-center space-x-2">
                     <button
-                      onClick={() => handleApplyToJob(job.id)}
+                      onClick={() => handleApplyToJob(job)}
                       className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                     >
                       Apply Now
                     </button>
-                    <button className="p-2 text-gray-400 hover:text-blue-600 transition-colors">
+                    <button
+                      onClick={() => handleViewJobDetails(job)}
+                      className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+                      title="View Job Details"
+                    >
                       <EyeIcon className="h-5 w-5" />
                     </button>
                   </div>
@@ -370,6 +385,23 @@ const JobSearch = () => {
           ))}
         </div>
       )}
+
+      {/* Job Details Modal */}
+      <JobDetailsModal
+        job={selectedJob}
+        isOpen={showJobDetails}
+        onClose={() => setShowJobDetails(false)}
+        onApply={() => handleApplyToJob(selectedJob)}
+        showApplyButton={true}
+      />
+
+      {/* Job Application Modal */}
+      <JobApplicationModal
+        job={jobToApply}
+        isOpen={showApplicationModal}
+        onClose={() => setShowApplicationModal(false)}
+        onApplicationSubmitted={handleApplicationSubmitted}
+      />
     </div>
   );
 };

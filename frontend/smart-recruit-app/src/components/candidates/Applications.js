@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
-import { 
+import JobDetailsModal from '../common/JobDetailsModal';
+import {
   DocumentTextIcon,
   BuildingOfficeIcon,
   CalendarIcon,
@@ -19,6 +20,8 @@ const Applications = () => {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all'); // all, pending, accepted, rejected, interview
+  const [selectedJob, setSelectedJob] = useState(null);
+  const [showJobDetails, setShowJobDetails] = useState(false);
 
   useEffect(() => {
     fetchApplications();
@@ -35,17 +38,30 @@ const Applications = () => {
         {
           id: 1,
           jobTitle: 'Senior Full Stack Developer',
+          title: 'Senior Full Stack Developer', // For modal compatibility
           company: 'TechCorp Solutions',
           companyLogo: null,
           status: 'pending',
           appliedAt: '2025-06-20T10:30:00Z',
           lastUpdated: '2025-06-20T10:30:00Z',
           jobLocation: 'Paris, France',
+          location: 'Paris, France', // For modal compatibility
           employmentType: 'Full-time',
           salary: '60k - 80k EUR',
+          salaryMin: 60,
+          salaryMax: 80,
+          currency: 'EUR',
+          experienceLevel: 'Senior',
+          remote: false,
+          description: 'We are looking for a Senior Full Stack Developer to join our dynamic team. You will be responsible for developing and maintaining web applications using modern technologies like React, Node.js, and PostgreSQL. The ideal candidate should have strong problem-solving skills and experience with agile development methodologies.',
+          requirements: '• 5+ years of experience in full-stack development\n• Proficiency in React, Node.js, and PostgreSQL\n• Experience with RESTful APIs and microservices\n• Knowledge of Git and CI/CD pipelines\n• Strong communication skills',
+          skills: ['React', 'Node.js', 'PostgreSQL', 'JavaScript', 'TypeScript', 'Git'],
+          benefits: ['Health insurance', 'Flexible working hours', 'Remote work options', 'Professional development budget'],
           applicationNotes: 'Applied through company website',
           interviewDate: null,
-          feedback: null
+          feedback: null,
+          createdAt: '2025-06-15T09:00:00Z',
+          applicationDeadline: '2025-07-15T23:59:59Z'
         },
         {
           id: 2,
@@ -107,6 +123,11 @@ const Applications = () => {
     if (filter === 'all') return true;
     return app.status === filter;
   });
+
+  const handleViewJobDetails = (application) => {
+    setSelectedJob(application);
+    setShowJobDetails(true);
+  };
 
   const getStatusBadge = (status) => {
     const statusConfig = {
@@ -305,7 +326,11 @@ const Applications = () => {
                   </div>
                   
                   <div className="flex items-center space-x-2">
-                    <button className="p-2 text-gray-400 hover:text-blue-600 transition-colors">
+                    <button
+                      onClick={() => handleViewJobDetails(application)}
+                      className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+                      title="View Job Details"
+                    >
                       <EyeIcon className="h-5 w-5" />
                     </button>
                   </div>
@@ -358,7 +383,10 @@ const Applications = () => {
                         View Offer Details →
                       </button>
                     )}
-                    <button className="text-gray-600 hover:text-gray-800">
+                    <button
+                      onClick={() => handleViewJobDetails(application)}
+                      className="text-gray-600 hover:text-gray-800"
+                    >
                       View Job Details
                     </button>
                   </div>
@@ -368,6 +396,14 @@ const Applications = () => {
           ))}
         </div>
       )}
+
+      {/* Job Details Modal */}
+      <JobDetailsModal
+        job={selectedJob}
+        isOpen={showJobDetails}
+        onClose={() => setShowJobDetails(false)}
+        showApplyButton={false}
+      />
     </div>
   );
 };

@@ -8,7 +8,7 @@ from openai import OpenAI
 from dotenv import load_dotenv
 
 # Load environment variables
-load_dotenv('../.env.global')
+load_dotenv('../.env')
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -62,50 +62,26 @@ def generate_career_recommendations_with_openai(user_profile, user_type="candida
         }
 
     try:
-        prompt = f"""
-        Generate personalized career recommendations for this {user_type} based on their profile.
+        # Simplify profile data
+        profile_summary = {
+            "skills": user_profile.get("skills", [])[:3],
+            "experience": user_profile.get("experience", "")[:100],
+            "goals": user_profile.get("goals", "")[:100]
+        }
 
-        USER PROFILE:
-        {json.dumps(user_profile, indent=2)}
+        prompt = f"""Give 3 career tips for {user_type}. Return JSON:
+{{"recommendations":[{{"type":"skill_development","title":"Learn X","priority":"high"}}],"aiConfidence":0.9}}
 
-        USER TYPE: {user_type}
-
-        Please analyze the profile and provide actionable recommendations in the following categories:
-        1. Skill Development - Skills to learn or improve
-        2. Career Growth - Next career steps or opportunities
-        3. Industry Trends - Relevant industry insights
-        4. Networking - Professional networking suggestions
-        5. Education - Courses, certifications, or training
-
-        Return ONLY a valid JSON object with this structure:
-        {{
-            "recommendations": [
-                {{
-                    "type": "skill_development|career_growth|industry_trends|networking|education",
-                    "title": "Recommendation title",
-                    "description": "Detailed description and actionable steps",
-                    "priority": "high|medium|low",
-                    "timeframe": "1-3 months|3-6 months|6-12 months|1+ years",
-                    "resources": ["List of helpful resources or links"],
-                    "reasoning": "Why this recommendation is relevant"
-                }}
-            ],
-            "careerPath": "Suggested career progression path",
-            "marketInsights": "Current market trends relevant to the user",
-            "aiConfidence": 0.95
-        }}
-
-        Provide 5-8 specific, actionable recommendations tailored to the user's current situation and goals.
-        """
+Profile: {json.dumps(profile_summary)}"""
 
         response = openai_client.chat.completions.create(
             model=OPENAI_MODEL,
             messages=[
-                {"role": "system", "content": "You are an expert career counselor and industry analyst. Provide personalized, actionable career recommendations based on user profiles and current market trends."},
+                {"role": "system", "content": "Give career tips. Return JSON only."},
                 {"role": "user", "content": prompt}
             ],
-            temperature=OPENAI_TEMPERATURE,
-            max_tokens=OPENAI_MAX_TOKENS
+            temperature=0.2,
+            max_tokens=300  # Reduced from 2000 to 300
         )
 
         # Parse the JSON response

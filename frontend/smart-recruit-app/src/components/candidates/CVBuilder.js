@@ -2,14 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
-import { 
+import CVImprovements from './CVImprovements';
+import {
   DocumentTextIcon,
   EyeIcon,
   ArrowDownTrayIcon,
   SparklesIcon,
   CheckIcon,
   PlusIcon,
-  TrashIcon
+  TrashIcon,
+  LightBulbIcon
 } from '@heroicons/react/24/outline';
 
 const CVBuilder = () => {
@@ -17,6 +19,7 @@ const CVBuilder = () => {
   const [selectedTemplate, setSelectedTemplate] = useState('modern');
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [showImprovements, setShowImprovements] = useState(false);
   const [cvData, setCvData] = useState({
     // Personal Information
     firstName: '',
@@ -93,22 +96,25 @@ const CVBuilder = () => {
       id: 'modern',
       name: 'Modern Professional',
       description: 'Clean, modern design with accent colors',
-      preview: '/templates/modern-preview.png',
-      features: ['Two-column layout', 'Color accents', 'Modern typography']
+      preview: null, // We'll create a CSS preview instead
+      features: ['Two-column layout', 'Color accents', 'Modern typography'],
+      colors: ['bg-blue-500', 'bg-blue-100', 'text-blue-900']
     },
     {
       id: 'classic',
       name: 'Classic Traditional',
       description: 'Traditional format preferred by conservative industries',
-      preview: '/templates/classic-preview.png',
-      features: ['Single-column layout', 'Professional fonts', 'Traditional structure']
+      preview: null,
+      features: ['Single-column layout', 'Professional fonts', 'Traditional structure'],
+      colors: ['bg-gray-700', 'bg-gray-100', 'text-gray-900']
     },
     {
       id: 'creative',
       name: 'Creative Designer',
       description: 'Eye-catching design for creative professionals',
-      preview: '/templates/creative-preview.png',
-      features: ['Creative layout', 'Visual elements', 'Portfolio showcase']
+      preview: null,
+      features: ['Creative layout', 'Visual elements', 'Portfolio showcase'],
+      colors: ['bg-purple-500', 'bg-purple-100', 'text-purple-900']
     }
   ];
 
@@ -125,86 +131,109 @@ const CVBuilder = () => {
       console.log('API response:', response);
 
       // The API interceptor returns response.data, so response is actually the data
-      const responseData = response;
+      const responseData = response.data || response;
       console.log('Response data:', responseData);
 
-      if (responseData && responseData.success && responseData.cvData) {
-        const cvDataFromDb = responseData.cvData;
+      // Check for cvData in different possible locations
+      let cvDataFromDb = null;
+      if (responseData && responseData.success) {
+        cvDataFromDb = responseData.cvData || responseData.data?.cvData;
+      }
+
+      console.log('CV data from DB:', cvDataFromDb);
+
+      if (cvDataFromDb) {
 
         console.log('Setting CV data:', cvDataFromDb);
 
-        setCvData({
-          firstName: cvDataFromDb.firstName || '',
-          lastName: cvDataFromDb.lastName || '',
-          email: cvDataFromDb.email || user?.email || '',
-          phone: cvDataFromDb.phone || '',
-          address: cvDataFromDb.address || '',
-          city: cvDataFromDb.city || '',
-          country: cvDataFromDb.country || '',
-          linkedinUrl: cvDataFromDb.linkedinUrl || '',
-          githubUrl: cvDataFromDb.githubUrl || '',
-          portfolioUrl: cvDataFromDb.portfolioUrl || '',
+        // Map the API response structure to the frontend structure
+        const personalInfo = cvDataFromDb.personalInfo || {};
+
+        console.log('Personal info from API:', personalInfo);
+        console.log('Full CV data from API:', cvDataFromDb);
+        console.log('Skills from API:', cvDataFromDb.skills);
+        console.log('Experience from API:', cvDataFromDb.experience);
+        console.log('Education from API:', cvDataFromDb.education);
+        console.log('Professional Summary:', cvDataFromDb.professionalSummary);
+        console.log('Languages:', cvDataFromDb.languages);
+        console.log('Projects:', cvDataFromDb.projects);
+        console.log('Certifications:', cvDataFromDb.certifications);
+        console.log('Selected Template:', cvDataFromDb.selectedTemplate);
+
+        // Prepare data for setCvData
+        const newCvData = {
+          firstName: personalInfo.firstName || '',
+          lastName: personalInfo.lastName || '',
+          email: personalInfo.email || user?.email || '',
+          phone: personalInfo.phone || '',
+          address: personalInfo.address || '',
+          city: personalInfo.city || '',
+          country: personalInfo.country || '',
+          linkedinUrl: personalInfo.linkedin || '',
+          githubUrl: personalInfo.github || '',
+          portfolioUrl: personalInfo.website || '',
           professionalSummary: cvDataFromDb.professionalSummary || '',
-          technicalSkills: cvDataFromDb.technicalSkills || '',
-          softSkills: cvDataFromDb.softSkills || '',
+          technicalSkills: cvDataFromDb.skills?.filter(s => ['Programming', 'Frontend', 'Backend'].includes(s.category))
+            .map(s => s.name).join(', ') || '',
+          softSkills: cvDataFromDb.skills?.filter(s => s.category === 'Soft')
+            .map(s => s.name).join(', ') || '',
           languages: cvDataFromDb.languages || '',
-          workExperience: Array.isArray(cvDataFromDb.workExperience) && cvDataFromDb.workExperience.length > 0
-            ? cvDataFromDb.workExperience
-            : [
-                {
-                  id: 1,
-                  jobTitle: '',
-                  company: '',
-                  location: '',
-                  startDate: '',
-                  endDate: '',
-                  current: false,
-                  description: ''
-                }
-              ],
+          workExperience: Array.isArray(cvDataFromDb.experience) && cvDataFromDb.experience.length > 0
+            ? cvDataFromDb.experience.map(exp => ({
+                id: exp.id || Date.now(),
+                jobTitle: exp.title || '',
+                company: exp.company || '',
+                location: exp.location || '',
+                startDate: exp.startDate || '',
+                endDate: exp.endDate || '',
+                current: exp.current || false,
+                description: exp.description || ''
+              }))
+            : [{ id: 1, jobTitle: '', company: '', location: '', startDate: '', endDate: '', current: false, description: '' }],
           education: Array.isArray(cvDataFromDb.education) && cvDataFromDb.education.length > 0
-            ? cvDataFromDb.education
-            : [
-                {
-                  id: 1,
-                  degree: '',
-                  institution: '',
-                  location: '',
-                  graduationDate: '',
-                  gpa: '',
-                  description: ''
-                }
-              ],
+            ? cvDataFromDb.education.map(edu => ({
+                id: edu.id || Date.now(),
+                degree: edu.degree || '',
+                institution: edu.institution || '',
+                location: edu.location || '',
+                graduationDate: edu.endDate || '',
+                gpa: edu.gpa || '',
+                description: edu.description || ''
+              }))
+            : [{ id: 1, degree: '', institution: '', location: '', graduationDate: '', gpa: '', description: '' }],
           projects: Array.isArray(cvDataFromDb.projects) && cvDataFromDb.projects.length > 0
-            ? cvDataFromDb.projects
-            : [
-                {
-                  id: 1,
-                  name: '',
-                  description: '',
-                  technologies: '',
-                  url: ''
-                }
-              ],
+            ? cvDataFromDb.projects.map(proj => ({
+                id: proj.id || Date.now(),
+                name: proj.name || '',
+                description: proj.description || '',
+                technologies: proj.technologies || '',
+                url: proj.url || '',
+                startDate: proj.startDate || '',
+                endDate: proj.endDate || ''
+              }))
+            : [{ id: 1, name: '', description: '', technologies: '', url: '', startDate: '', endDate: '' }],
           certifications: Array.isArray(cvDataFromDb.certifications) && cvDataFromDb.certifications.length > 0
-            ? cvDataFromDb.certifications
-            : [
-                {
-                  id: 1,
-                  name: '',
-                  issuer: '',
-                  date: '',
-                  url: ''
-                }
-              ]
-        });
+            ? cvDataFromDb.certifications.map(cert => ({
+                id: cert.id || Date.now(),
+                name: cert.name || '',
+                issuer: cert.issuer || '',
+                date: cert.date || '',
+                url: cert.url || ''
+              }))
+            : [{ id: 1, name: '', issuer: '', date: '', url: '' }]
+        };
+
+        console.log('Data being set to state:', newCvData);
+
+        setCvData(newCvData);
 
         setSelectedTemplate(cvDataFromDb.selectedTemplate || 'modern');
         toast.success('CV data loaded successfully!');
       } else {
         console.log('No CV data found or invalid response structure');
         console.log('Response structure:', responseData);
-        toast.info('No existing CV data found. Starting with a blank form.');
+        console.log('No existing CV data found. Starting with a blank form.');
+        // Don't show error toast for empty CV data - this is normal for new users
       }
     } catch (error) {
       console.error('Error loading CV data:', error);
@@ -364,7 +393,7 @@ const CVBuilder = () => {
         const blob = new Blob([response.htmlContent], { type: 'text/html' });
         const url = URL.createObjectURL(blob);
         window.open(url, '_blank');
-        toast.info('CV opened in new tab. Use browser Print → Save as PDF to download.');
+        toast.success('CV opened in new tab. Use browser Print → Save as PDF to download.');
       } else {
         throw new Error('No CV content received');
       }
@@ -372,6 +401,70 @@ const CVBuilder = () => {
       console.error('Error downloading CV:', error);
       toast.error('Failed to download CV. Please try again.');
     }
+  };
+
+  // Generate CV text for AI analysis
+  const generateCVText = () => {
+    const sections = [];
+
+    // Personal Info
+    sections.push(`${cvData.firstName} ${cvData.lastName}`);
+    if (cvData.email) sections.push(`Email: ${cvData.email}`);
+    if (cvData.phone) sections.push(`Phone: ${cvData.phone}`);
+    if (cvData.address) sections.push(`Address: ${cvData.address}, ${cvData.city}, ${cvData.country}`);
+
+    // Professional Summary
+    if (cvData.professionalSummary) {
+      sections.push(`\nPROFESSIONAL SUMMARY:\n${cvData.professionalSummary}`);
+    }
+
+    // Work Experience
+    if (cvData.workExperience.length > 0) {
+      sections.push('\nWORK EXPERIENCE:');
+      cvData.workExperience.forEach(exp => {
+        if (exp.jobTitle || exp.company) {
+          sections.push(`${exp.jobTitle} at ${exp.company} (${exp.startDate} - ${exp.current ? 'Present' : exp.endDate})`);
+          if (exp.description) sections.push(exp.description);
+        }
+      });
+    }
+
+    // Education
+    if (cvData.education.length > 0) {
+      sections.push('\nEDUCATION:');
+      cvData.education.forEach(edu => {
+        if (edu.degree || edu.institution) {
+          sections.push(`${edu.degree} - ${edu.institution} (${edu.year})`);
+        }
+      });
+    }
+
+    // Skills
+    if (cvData.skills) {
+      sections.push(`\nSKILLS:\n${cvData.skills}`);
+    }
+
+    // Projects
+    if (cvData.projects.length > 0) {
+      sections.push('\nPROJECTS:');
+      cvData.projects.forEach(project => {
+        if (project.name) {
+          sections.push(`${project.name}: ${project.description}`);
+        }
+      });
+    }
+
+    // Certifications
+    if (cvData.certifications.length > 0) {
+      sections.push('\nCERTIFICATIONS:');
+      cvData.certifications.forEach(cert => {
+        if (cert.name) {
+          sections.push(`${cert.name} - ${cert.issuer} (${cert.year})`);
+        }
+      });
+    }
+
+    return sections.join('\n');
   };
 
   if (loading) {
@@ -414,7 +507,14 @@ const CVBuilder = () => {
                       ? 'border-blue-500 bg-blue-50'
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
-                  onClick={() => setSelectedTemplate(template.id)}
+                  onClick={() => {
+                    console.log('Switching to template:', template.id);
+                    setSelectedTemplate(template.id);
+                    // Auto-save when template changes
+                    setTimeout(() => {
+                      saveCvData();
+                    }, 500);
+                  }}
                 >
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="font-medium text-gray-900">{template.name}</h4>
@@ -422,6 +522,28 @@ const CVBuilder = () => {
                       <CheckIcon className="h-5 w-5 text-blue-600" />
                     )}
                   </div>
+
+                  {/* Template Preview */}
+                  <div className="mb-3 p-3 bg-gray-50 rounded border">
+                    <div className="space-y-2">
+                      <div className={`h-2 ${template.colors[0]} rounded`}></div>
+                      <div className="space-y-1">
+                        <div className="h-1 bg-gray-300 rounded w-3/4"></div>
+                        <div className="h-1 bg-gray-300 rounded w-1/2"></div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <div className="h-1 bg-gray-300 rounded"></div>
+                          <div className="h-1 bg-gray-300 rounded w-3/4"></div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="h-1 bg-gray-300 rounded"></div>
+                          <div className="h-1 bg-gray-300 rounded w-2/3"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   <p className="text-sm text-gray-600 mb-3">{template.description}</p>
                   <div className="space-y-1">
                     {template.features.map((feature, index) => (
@@ -483,6 +605,13 @@ const CVBuilder = () => {
               >
                 <ArrowDownTrayIcon className="mr-2 h-4 w-4" />
                 Download PDF
+              </button>
+              <button
+                onClick={() => setShowImprovements(true)}
+                className="w-full flex items-center justify-center px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-md hover:from-purple-700 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg"
+              >
+                <LightBulbIcon className="mr-2 h-4 w-4" />
+                AI Improvements
               </button>
             </div>
           </div>
@@ -922,6 +1051,14 @@ const CVBuilder = () => {
           </div>
         </div>
       </div>
+
+      {/* CV Improvements Modal */}
+      {showImprovements && (
+        <CVImprovements
+          cvText={generateCVText()}
+          onClose={() => setShowImprovements(false)}
+        />
+      )}
     </div>
   );
 };
