@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react'
 import { UserGroupIcon, EyeIcon, CheckIcon, XMarkIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
 import api from '../../services/api'
 import toast from 'react-hot-toast'
+import CVModal from '../../components/common/CVModal'
 
 const CandidatesPage = () => {
   const [applications, setApplications] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedApplication, setSelectedApplication] = useState(null)
   const [showCVModal, setShowCVModal] = useState(false)
+  const [selectedCV, setSelectedCV] = useState(null)
 
   useEffect(() => {
     fetchApplications()
@@ -25,16 +27,18 @@ const CandidatesPage = () => {
       // Format applications for display
       const formattedApplications = allApplications.map(app => ({
         id: app.id,
-        candidateName: `${app.candidate?.first_name || ''} ${app.candidate?.last_name || ''}`.trim() || 'Unknown Candidate',
-        jobTitle: app.job?.title || 'Unknown Job',
-        appliedDate: new Date(app.applied_at || app.createdAt).toISOString().split('T')[0],
+        candidateName: app.candidateName || 'Unknown Candidate',
+        jobTitle: app.jobTitle || 'Unknown Job',
+        appliedDate: app.appliedDate || new Date().toISOString().split('T')[0],
         status: app.status || 'pending',
-        matchScore: calculateMatchScore(app), // We'll implement this
-        email: app.candidate?.user?.email || app.cv_snapshot?.email || 'No email',
-        coverLetter: app.cover_letter,
-        cvSnapshot: app.cv_snapshot,
-        candidate: app.candidate,
-        job: app.job,
+        matchScore: app.matchScore || 0,
+        email: app.email || 'No email',
+        coverLetter: app.coverLetter,
+        cvSnapshot: app.cvSnapshot,
+        matchAnalysis: app.matchAnalysis,
+        matchStrengths: app.matchStrengths,
+        matchGaps: app.matchGaps,
+        matchCalculatedAt: app.matchCalculatedAt,
         notes: app.notes,
         rating: app.rating
       }))
@@ -49,7 +53,12 @@ const CandidatesPage = () => {
   }
 
   const calculateMatchScore = (application) => {
-    // Simple match score calculation - you can enhance this
+    // Use the calculated match score from database if available
+    if (application.match_score !== null && application.match_score !== undefined) {
+      return application.match_score
+    }
+
+    // Fallback to simple calculation if no AI score available
     let score = 70 // Base score
 
     if (application.cv_snapshot?.technical_skills) {
@@ -79,6 +88,16 @@ const CandidatesPage = () => {
     }
   }
 
+  const viewCV = (application) => {
+    setSelectedCV(application)
+    setShowCVModal(true)
+  }
+
+  const closeCVModal = () => {
+    setShowCVModal(false)
+    setSelectedCV(null)
+  }
+
   const handleStatusChange = async (applicationId, newStatus) => {
     try {
       await api.put(`/applications/${applicationId}`, { status: newStatus })
@@ -93,8 +112,7 @@ const CandidatesPage = () => {
   }
 
   const handleViewCV = (application) => {
-    setSelectedApplication(application)
-    setShowCVModal(true)
+    viewCV(application)
   }
 
   return (
@@ -285,6 +303,64 @@ const CandidatesPage = () => {
               <div className="bg-white px-6 py-6 max-h-96 overflow-y-auto">
                 {selectedApplication.cvSnapshot ? (
                   <div className="space-y-6">
+                    {/* Match Score Section */}
+                    {selectedApplication.matchScore && (
+                      <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                        <h4 className="text-lg font-semibold text-blue-900 mb-3">AI Match Analysis</h4>
+                        <div className="flex items-center mb-3">
+                          <span className="text-3xl font-bold text-blue-900 mr-4">
+                            {selectedApplication.matchScore}%
+                          </span>
+                          <div className="flex-1 bg-gray-200 rounded-full h-4">
+                            <div
+                              className="bg-blue-600 h-4 rounded-full transition-all duration-500"
+                              style={{ width: `${selectedApplication.matchScore}%` }}
+                            ></div>
+                          </div>
+                        </div>
+
+                        {selectedApplication.match_analysis && (
+                          <p className="text-sm text-blue-800 mb-3">{selectedApplication.match_analysis}</p>
+                        )}
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {selectedApplication.match_strengths && selectedApplication.match_strengths.length > 0 && (
+                            <div>
+                              <h5 className="text-sm font-semibold text-green-800 mb-2">✅ Strengths</h5>
+                              <ul className="text-sm text-green-700 space-y-1">
+                                {selectedApplication.match_strengths.map((strength, index) => (
+                                  <li key={index} className="flex items-start">
+                                    <span className="mr-2">•</span>
+                                    <span>{strength}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {selectedApplication.match_gaps && selectedApplication.match_gaps.length > 0 && (
+                            <div>
+                              <h5 className="text-sm font-semibold text-orange-800 mb-2">⚠️ Areas for Improvement</h5>
+                              <ul className="text-sm text-orange-700 space-y-1">
+                                {selectedApplication.match_gaps.map((gap, index) => (
+                                  <li key={index} className="flex items-start">
+                                    <span className="mr-2">•</span>
+                                    <span>{gap}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+
+                        {selectedApplication.match_calculated_at && (
+                          <p className="text-xs text-gray-500 mt-3">
+                            Calculated: {new Date(selectedApplication.match_calculated_at).toLocaleString()}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
                     {/* Personal Information */}
                     <div>
                       <h4 className="text-lg font-semibold text-gray-900 mb-3">Personal Information</h4>
@@ -343,6 +419,15 @@ const CandidatesPage = () => {
           </div>
         </div>
       )}
+
+      {/* CV Modal */}
+      <CVModal
+        isOpen={showCVModal}
+        onClose={closeCVModal}
+        cvSnapshot={selectedCV?.cvSnapshot}
+        candidateName={selectedCV?.candidateName}
+        jobTitle={selectedCV?.jobTitle}
+      />
     </div>
   )
 }

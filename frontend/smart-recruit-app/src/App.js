@@ -14,7 +14,6 @@ import RegisterPage from './pages/auth/RegisterPage'
 import CandidateDashboardPage from './pages/candidate/DashboardPage'
 import JobSearchPage from './pages/candidate/JobSearchPage'
 import ApplicationsPage from './pages/candidate/ApplicationsPage'
-import ResumePage from './pages/candidate/ResumePage'
 import CVBuilderPage from './pages/candidate/CVBuilderPage'
 import CandidateSettingsPage from './pages/candidate/SettingsPage'
 
@@ -77,7 +76,6 @@ const AppContent = () => {
                 <Route path="dashboard" element={<CandidateDashboardPage />} />
                 <Route path="jobs" element={<JobSearchPage />} />
                 <Route path="applications" element={<ApplicationsPage />} />
-                <Route path="resume" element={<ResumePage />} />
                 <Route path="cv-builder" element={<CVBuilderPage />} />
                 <Route path="settings" element={<CandidateSettingsPage />} />
                 <Route path="" element={<Navigate to="dashboard" replace />} />

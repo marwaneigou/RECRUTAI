@@ -10,7 +10,6 @@ import {
   ChartBarIcon,
   BellIcon,
   MagnifyingGlassIcon,
-  CloudArrowUpIcon,
   UserIcon,
   SparklesIcon
 } from '@heroicons/react/24/outline'
@@ -18,8 +17,14 @@ import {
 const CandidateDashboard = () => {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [stats, setStats] = useState(null)
+  const [stats, setStats] = useState({
+    applicationsSent: 0,
+    jobMatches: 0,
+    profileViews: 0,
+    interviews: 0
+  })
   const [loading, setLoading] = useState(true)
+  const [forceUpdate, setForceUpdate] = useState(0)
   const [selectedJob, setSelectedJob] = useState(null)
   const [showJobDetails, setShowJobDetails] = useState(false)
 
@@ -30,54 +35,90 @@ const CandidateDashboard = () => {
   const fetchCandidateStats = async () => {
     try {
       setLoading(true)
-      // This would be the actual API call when candidate stats are implemented
-      // const response = await api.get('/candidates/stats')
+      console.log('Fetching candidate stats...') // Debug log
 
-      // For now, use mock data
-      const mockStats = {
-        applicationsSent: 12,
-        jobMatches: 8,
-        profileViews: 24,
-        interviews: 3
+      // Fetch real stats from dedicated endpoint
+      const response = await api.get('/stats/candidate')
+      console.log('🔍 Full candidate API response:', response) // Debug log
+
+      // The API service returns response.data directly, so response is actually the data
+      // The actual structure is: response.data.stats (not response.data.data.stats)
+      const statsData = response.data?.stats || {}
+      console.log('📊 Extracted candidate stats:', statsData) // Debug log
+
+      // Validate that we have the expected data
+      if (statsData && typeof statsData === 'object') {
+        setStats(statsData)
+        setForceUpdate(prev => prev + 1) // Force re-render
+        console.log('✅ Candidate stats successfully set:', statsData) // Debug log
+      } else {
+        console.error('❌ Invalid candidate stats data received:', statsData)
+        throw new Error('Invalid stats data format')
       }
-
-      setStats(mockStats)
     } catch (error) {
-      console.error('Error fetching candidate stats:', error)
+      console.error('❌ Error fetching candidate stats:', error)
+      console.error('Error details:', error.message, error.stack)
       toast.error('Failed to load dashboard data')
+
+      // Only set fallback if there was actually an error
+      console.log('Setting fallback candidate stats due to error')
+      setStats({
+        applicationsSent: 0,
+        jobMatches: 0,
+        profileViews: 0,
+        interviews: 0
+      })
     } finally {
       setLoading(false)
     }
   }
 
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-gray-200 animate-pulse rounded-lg h-32"></div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="bg-gray-200 animate-pulse rounded-lg h-24"></div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  // Removed null check since we have default values
+
   // Dashboard content only (no view switching)
 
   // Main dashboard view
+  console.log('Rendering CandidateDashboard with stats:', stats, 'forceUpdate:', forceUpdate) // Debug log
+
   const statsData = [
     {
       name: 'Applications Sent',
-      value: stats?.applicationsSent || '0',
+      value: stats.applicationsSent,
       icon: DocumentTextIcon,
       color: 'bg-blue-500',
       change: '+2 this week'
     },
     {
       name: 'Job Matches',
-      value: stats?.jobMatches || '0',
+      value: stats.jobMatches,
       icon: BriefcaseIcon,
       color: 'bg-green-500',
       change: '+3 new matches'
     },
     {
       name: 'Profile Views',
-      value: stats?.profileViews || '0',
+      value: stats.profileViews,
       icon: ChartBarIcon,
       color: 'bg-purple-500',
       change: '+5 this week'
     },
     {
       name: 'Interviews',
-      value: stats?.interviews || '0',
+      value: stats.interviews,
       icon: BellIcon,
       color: 'bg-orange-500',
       change: '1 scheduled'
@@ -170,10 +211,10 @@ const CandidateDashboard = () => {
             Welcome back, {user?.candidateProfile?.firstName || user?.name || 'Candidate'}! 👋
           </h1>
           <p className="text-blue-100">
-            You have {stats?.jobMatches || 0} new job matches and {stats?.interviews || 0} interview{stats?.interviews !== 1 ? 's' : ''} scheduled.
+            You have {stats.jobMatches} new job matches and {stats.interviews} interview{stats.interviews !== 1 ? 's' : ''} scheduled.
           </p>
         </div>
-
+        
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {statsData.map((stat) => (
@@ -296,14 +337,7 @@ const CandidateDashboard = () => {
                 <p className="text-sm font-medium text-gray-900">Build CV</p>
                 <p className="text-xs text-gray-500">Create professional CV</p>
               </button>
-              <button
-                onClick={() => navigate('/candidate/resume')}
-                className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
-              >
-                <CloudArrowUpIcon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                <p className="text-sm font-medium text-gray-900">Manage Resume</p>
-                <p className="text-xs text-gray-500">Upload and update resumes</p>
-              </button>
+
               <button
                 onClick={() => navigate('/candidate/jobs')}
                 className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors"

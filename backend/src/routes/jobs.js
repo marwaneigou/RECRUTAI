@@ -59,17 +59,17 @@ router.get('/', async (req, res) => {
               industry: true
             }
           },
-          jobSkills: {
-            include: {
-              skill: {
-                select: {
-                  id: true,
-                  name: true,
-                  category: true
-                }
-              }
-            }
-          }
+          // jobSkills: {
+          //   include: {
+          //     skill: {
+          //       select: {
+          //         id: true,
+          //         name: true,
+          //         category: true
+          //       }
+          //     }
+          //   }
+          // }
         },
         orderBy: { createdAt: 'desc' }
       }),
@@ -203,21 +203,32 @@ router.post('/',
 
       // Map employment type to enum values
       const employmentTypeMap = {
-        'full-time': 'FULL_TIME',
-        'part-time': 'PART_TIME',
-        'contract': 'CONTRACT',
-        'internship': 'INTERNSHIP',
-        'freelance': 'FREELANCE'
+        'full-time': 'full_time',
+        'part-time': 'part_time',
+        'contract': 'contract',
+        'internship': 'internship',
+        'freelance': 'freelance',
+        'FULL_TIME': 'full_time',
+        'PART_TIME': 'part_time',
+        'CONTRACT': 'contract',
+        'INTERNSHIP': 'internship',
+        'FREELANCE': 'freelance'
       };
 
       // Map experience level to enum values
       const experienceLevelMap = {
-        'entry': 'ENTRY',
-        'junior': 'JUNIOR',
-        'mid': 'MID',
-        'senior': 'SENIOR',
-        'lead': 'LEAD',
-        'executive': 'EXECUTIVE'
+        'entry': 'entry',
+        'junior': 'junior',
+        'mid': 'mid',
+        'senior': 'senior',
+        'lead': 'lead',
+        'executive': 'executive',
+        'ENTRY': 'entry',
+        'JUNIOR': 'junior',
+        'MID': 'mid',
+        'SENIOR': 'senior',
+        'LEAD': 'lead',
+        'EXECUTIVE': 'executive'
       };
 
       // Validate salary range
@@ -386,17 +397,17 @@ router.get('/:id', async (req, res) => {
             country: true
           }
         },
-        jobSkills: {
-          include: {
-            skill: {
-              select: {
-                id: true,
-                name: true,
-                category: true
-              }
-            }
-          }
-        },
+        // jobSkills: {
+        //   include: {
+        //     skill: {
+        //       select: {
+        //         id: true,
+        //         name: true,
+        //         category: true
+        //       }
+        //     }
+        //   }
+        // },
         applications: {
           select: {
             id: true,

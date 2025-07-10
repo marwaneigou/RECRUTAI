@@ -105,6 +105,7 @@ app.use('/api/employers', employerRoutes)
 app.use('/api/skills', skillRoutes)
 app.use('/api/notifications', notificationRoutes)
 app.use('/api/cv', cvRoutes)
+app.use('/api/stats', require('./routes/stats'))
 
 // Swagger documentation (only in development)
 if (process.env.NODE_ENV === 'development' && process.env.ENABLE_SWAGGER === 'true') {

@@ -1,6 +1,8 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
+import api from '../../services/api'
+import toast from 'react-hot-toast'
 import {
   BriefcaseIcon,
   UserGroupIcon,
@@ -13,14 +15,78 @@ import {
 const EmployerDashboard = () => {
   const { user } = useAuth()
   const navigate = useNavigate()
-  
-  const stats = {
-    companyName: 'Your Company',
-    activeJobs: 5,
-    totalApplications: 23,
-    pendingApplications: 12,
-    totalJobs: 8
+  const [stats, setStats] = useState({
+    companyName: 'Loading...',
+    activeJobs: 0,
+    totalApplications: 0,
+    pendingApplications: 0,
+    totalJobs: 0
+  })
+  const [loading, setLoading] = useState(true)
+  const [forceUpdate, setForceUpdate] = useState(0)
+
+  useEffect(() => {
+    fetchEmployerStats()
+  }, [])
+
+  const fetchEmployerStats = async () => {
+    try {
+      setLoading(true)
+      console.log('Fetching employer stats...') // Debug log
+
+      // Fetch real stats from dedicated endpoint
+      const response = await api.get('/stats/employer')
+      console.log('🔍 Full API response:', response) // Debug log
+
+      // The API service returns response.data directly, so response is actually the data
+      // The actual structure is: response.data.stats (not response.data.data.stats)
+      const statsData = response.data?.stats || {}
+      console.log('📊 Extracted employer stats:', statsData) // Debug log
+
+      // Validate that we have the expected data
+      if (statsData && typeof statsData === 'object') {
+        setStats(statsData)
+        setForceUpdate(prev => prev + 1) // Force re-render
+        console.log('✅ Stats successfully set:', statsData) // Debug log
+      } else {
+        console.error('❌ Invalid stats data received:', statsData)
+        throw new Error('Invalid stats data format')
+      }
+    } catch (error) {
+      console.error('❌ Error fetching employer stats:', error)
+      console.error('Error details:', error.message, error.stack)
+      toast.error('Failed to load dashboard data')
+
+      // Only set fallback if there was actually an error
+      console.log('Setting fallback stats due to error')
+      setStats({
+        companyName: user?.name || 'Your Company',
+        activeJobs: 0,
+        totalApplications: 0,
+        pendingApplications: 0,
+        totalJobs: 0
+      })
+    } finally {
+      setLoading(false)
+    }
   }
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-gray-200 animate-pulse rounded-lg h-32"></div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="bg-gray-200 animate-pulse rounded-lg h-24"></div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  // Removed null check since we have default values
+
+  console.log('Rendering EmployerDashboard with stats:', stats, 'forceUpdate:', forceUpdate) // Debug log
 
   return (
     <div className="space-y-6">
@@ -46,6 +112,13 @@ const EmployerDashboard = () => {
           >
             <Cog6ToothIcon className="h-5 w-5 inline mr-2" />
             Manage Profile
+          </button>
+          <button
+            onClick={fetchEmployerStats}
+            className="bg-white/20 text-white px-4 py-2 rounded-md font-medium hover:bg-white/30"
+            disabled={loading}
+          >
+            {loading ? 'Refreshing...' : 'Refresh Stats'}
           </button>
         </div>
       </div>

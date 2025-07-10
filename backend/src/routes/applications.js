@@ -14,8 +14,8 @@ router.get('/', authenticateToken, async (req, res) => {
 
     if (role === 'employer') {
       // Get applications for employer's jobs
-      const employer = await prisma.employers.findUnique({
-        where: { user_id: userId }
+      const employer = await prisma.employer.findUnique({
+        where: { userId: userId }
       })
 
       if (!employer) {
@@ -25,7 +25,7 @@ router.get('/', authenticateToken, async (req, res) => {
         })
       }
 
-      applications = await prisma.applications.findMany({
+      applications = await prisma.application.findMany({
         include: {
           candidate: {
             include: {
@@ -37,38 +37,41 @@ router.get('/', authenticateToken, async (req, res) => {
           job: {
             include: {
               employer: {
-                select: { id: true, company_name: true }
+                select: { id: true, companyName: true }
               }
             }
           }
         },
         where: {
           job: {
-            employer_id: employer.id
+            employerId: employer.id
           }
         },
         orderBy: {
-          applied_at: 'desc'
+          appliedAt: 'desc'
         }
       })
 
       // Format applications for frontend
       applications = applications.map(app => ({
         id: app.id,
-        candidateName: app.candidate.user.name,
-        email: app.candidate.user.email,
+        candidateName: app.candidate?.user?.name || 'Unknown',
+        email: app.candidate?.user?.email || 'Unknown',
         jobTitle: app.job.title,
-        appliedDate: app.applied_at.toISOString().split('T')[0],
+        appliedDate: app.appliedAt.toISOString().split('T')[0],
         status: app.status,
-        matchScore: app.match_score || 0,
-        coverLetter: app.cover_letter,
-        cvSnapshot: app.cv_snapshot,
-        matchAnalysis: app.match_analysis
+        matchScore: app.matchScore || 0,
+        coverLetter: app.coverLetter,
+        cvSnapshot: app.cvSnapshot,
+        matchAnalysis: app.matchAnalysis,
+        matchStrengths: app.matchStrengths,
+        matchGaps: app.matchGaps,
+        matchCalculatedAt: app.matchCalculatedAt
       }))
     } else if (role === 'candidate') {
       // Get candidate's applications
-      const candidate = await prisma.candidates.findUnique({
-        where: { user_id: userId }
+      const candidate = await prisma.candidate.findUnique({
+        where: { userId: userId }
       })
 
       if (!candidate) {
@@ -78,21 +81,28 @@ router.get('/', authenticateToken, async (req, res) => {
         })
       }
 
-      applications = await prisma.applications.findMany({
+      applications = await prisma.application.findMany({
         include: {
+          candidate: {
+            include: {
+              user: {
+                select: { id: true, name: true, email: true }
+              }
+            }
+          },
           job: {
             include: {
               employer: {
-                select: { id: true, company_name: true }
+                select: { id: true, companyName: true }
               }
             }
           }
         },
         where: {
-          candidate_id: candidate.id
+          candidateId: candidate.id
         },
         orderBy: {
-          applied_at: 'desc'
+          appliedAt: 'desc'
         }
       })
     }
@@ -141,8 +151,17 @@ router.post('/', [
     }
 
     const { role, id: userId } = req.user
-    const { jobId, coverLetter, cvSnapshot, matchScore, matchAnalysis } = req.body
+    const { jobId, coverLetter, cvSnapshot, matchScore, matchAnalysis, matchStrengths, matchGaps } = req.body
 
+    // Validate required fields
+    if (!matchScore || matchScore < 0 || matchScore > 100) {
+      return res.status(400).json({
+        success: false,
+        error: { message: 'Match score is required and must be between 0 and 100' }
+      })
+    }
+
+    // Only candidates can apply to jobs
     if (role !== 'candidate') {
       return res.status(403).json({
         success: false,
@@ -151,8 +170,8 @@ router.post('/', [
     }
 
     // Get candidate profile
-    const candidate = await prisma.candidates.findUnique({
-      where: { user_id: userId }
+    const candidate = await prisma.candidate.findUnique({
+      where: { userId: userId }
     })
 
     if (!candidate) {
@@ -163,7 +182,7 @@ router.post('/', [
     }
 
     // Check if job exists
-    const job = await prisma.jobs.findUnique({
+    const job = await prisma.job.findUnique({
       where: { id: parseInt(jobId) }
     })
 
@@ -175,11 +194,11 @@ router.post('/', [
     }
 
     // Check if already applied
-    const existingApplication = await prisma.applications.findUnique({
+    const existingApplication = await prisma.application.findUnique({
       where: {
-        job_id_candidate_id: {
-          job_id: parseInt(jobId),
-          candidate_id: candidate.id
+        jobId_candidateId: {
+          jobId: parseInt(jobId),
+          candidateId: candidate.id
         }
       }
     })
@@ -192,22 +211,25 @@ router.post('/', [
     }
 
     // Create application with match score
-    const application = await prisma.applications.create({
+    const application = await prisma.application.create({
       data: {
-        job_id: parseInt(jobId),
-        candidate_id: candidate.id,
-        cover_letter: coverLetter,
-        cv_snapshot: cvSnapshot || {},
-        match_score: matchScore || null,
-        match_analysis: matchAnalysis || null,
+        jobId: parseInt(jobId),
+        candidateId: candidate.id,
+        coverLetter: coverLetter,
+        cvSnapshot: cvSnapshot || {},
+        matchScore: matchScore || null,
+        matchAnalysis: matchAnalysis || null,
+        matchStrengths: matchStrengths || null,
+        matchGaps: matchGaps || null,
+        matchCalculatedAt: matchScore ? new Date() : null,
         status: 'pending',
-        applied_at: new Date()
+        appliedAt: new Date()
       },
       include: {
         job: {
           include: {
             employer: {
-              select: { company_name: true }
+              select: { companyName: true }
             }
           }
         }

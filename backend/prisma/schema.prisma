@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,21 +8,20 @@ datasource db {
 }
 
 model User {
-  id            Int      @id @default(autoincrement())
-  uuid          String   @unique @default(uuid())
+  id            Int       @id @default(autoincrement())
+  uuid          String    @unique @default(uuid())
   name          String
-  email         String   @unique
-  passwordHash  String   @map("password_hash")
+  email         String    @unique
+  passwordHash  String
   role          Role
-  isActive      Boolean  @default(true) @map("is_active")
-  emailVerified Boolean  @default(false) @map("email_verified")
+  isActive      Boolean   @default(true)
+  emailVerified Boolean   @default(false)
   phone         String?
-  avatarUrl     String?  @map("avatar_url")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
-  lastLogin     DateTime? @map("last_login")
+  avatarUrl     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastLogin     DateTime?
 
-  // Relations
   employer      Employer?
   candidate     Candidate?
   sessions      Session[]
@@ -34,142 +30,26 @@ model User {
   @@map("users")
 }
 
-model Employer {
-  id           Int      @id @default(autoincrement())
-  userId       Int      @unique @map("user_id")
-  companyName  String   @map("company_name")
-  industry     String?
-  companySize  String?  @map("company_size")
-  website      String?
-  description  String?
-  logoUrl      String?  @map("logo_url")
-  address      String?
-  city         String?
-  country      String?
-  foundedYear  Int?     @map("founded_year")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  jobs Job[]
-
-  @@map("employers")
-}
-
-model Candidate {
-  id                Int       @id @default(autoincrement())
-  userId            Int       @unique @map("user_id")
-  firstName         String    @map("first_name")
-  lastName          String    @map("last_name")
-  dateOfBirth       DateTime? @map("date_of_birth")
-  location          String?
-  experienceYears   Int       @default(0) @map("experience_years")
-  currentPosition   String?   @map("current_position")
-  currentCompany    String?   @map("current_company")
-  salaryExpectation Decimal?  @map("salary_expectation") @db.Decimal(10, 2)
-  currency          String    @default("USD")
-  availabilityDate  DateTime? @map("availability_date")
-  linkedinUrl       String?   @map("linkedin_url")
-  githubUrl         String?   @map("github_url")
-  portfolioUrl      String?   @map("portfolio_url")
-  createdAt         DateTime  @default(now()) @map("created_at")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
-
-  // Relations
-  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  applications     Application[]
-  candidateSkills  CandidateSkill[]
-  cvData           CvData?
-
-  @@map("candidates")
-}
-
-model CvData {
-  id                   Int      @id @default(autoincrement())
-  candidateId          Int      @unique @map("candidate_id")
-  selectedTemplate     String   @default("modern") @map("selected_template") // modern, classic, creative
-
-  // Personal Information
-  firstName            String?  @map("first_name")
-  lastName             String?  @map("last_name")
-  email                String?
-  phone                String?
-  address              String?
-  city                 String?
-  country              String?
-  linkedinUrl          String?  @map("linkedin_url")
-  githubUrl            String?  @map("github_url")
-  portfolioUrl         String?  @map("portfolio_url")
-
-  // Professional Summary
-  professionalSummary  String?  @map("professional_summary")
-
-  // Skills
-  technicalSkills      String?  @map("technical_skills")
-  softSkills           String?  @map("soft_skills")
-  languages            String?
-
-  // Additional Data stored as JSON
-  workExperience       Json?    @map("work_experience") // Array of work experience objects
-  education            Json?    // Array of education objects
-  projects             Json?    // Array of project objects
-  certifications       Json?    // Array of certification objects
-
-  // CV Status
-  isComplete           Boolean  @default(false) @map("is_complete")
-  lastGenerated        DateTime? @map("last_generated")
-
-  createdAt            DateTime @default(now()) @map("created_at")
-  updatedAt            DateTime @updatedAt @map("updated_at")
-
-  candidate            Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-
-  @@map("cv_data")
-}
-
-model Job {
-  id                  Int            @id @default(autoincrement())
-  employerId          Int            @map("employer_id")
-  title               String
-  description         String
-  requirements        String?
-  responsibilities    String?
-  location            String?
-  employmentType      EmploymentType @map("employment_type")
-  experienceLevel     ExperienceLevel @map("experience_level")
-  salaryMin           Decimal?       @map("salary_min") @db.Decimal(10, 2)
-  salaryMax           Decimal?       @map("salary_max") @db.Decimal(10, 2)
-  currency            String         @default("USD")
-  remoteAllowed       Boolean        @default(false) @map("remote_allowed")
-  isActive            Boolean        @default(true) @map("is_active")
-  applicationDeadline DateTime?      @map("application_deadline")
-  createdAt           DateTime       @default(now()) @map("created_at")
-  updatedAt           DateTime       @updatedAt @map("updated_at")
-
-  // Relations
-  employer     Employer      @relation(fields: [employerId], references: [id], onDelete: Cascade)
-  applications Application[]
-  jobSkills    JobSkill[]
-
-  @@map("jobs")
-}
-
 model Application {
-  id          Int               @id @default(autoincrement())
-  jobId       Int               @map("job_id")
-  candidateId Int               @map("candidate_id")
-  status      ApplicationStatus @default(PENDING)
-  coverLetter String?           @map("cover_letter")
-  cvUrl       String?           @map("cv_url")
-  appliedAt   DateTime          @default(now()) @map("applied_at")
-  reviewedAt  DateTime?         @map("reviewed_at")
-  notes       String?
-  rating      Int?              @db.SmallInt
-  createdAt   DateTime          @default(now()) @map("created_at")
-  updatedAt   DateTime          @updatedAt @map("updated_at")
+  id                 Int               @id @default(autoincrement())
+  jobId              Int
+  candidateId        Int
+  status             ApplicationStatus @default(pending)
+  coverLetter        String?
+  cvUrl              String?
+  appliedAt          DateTime          @default(now())
+  reviewedAt         DateTime?
+  notes              String?
+  rating             Int?              @db.SmallInt
+  cvSnapshot         Json?
+  matchScore         Int?
+  matchAnalysis      String?
+  matchStrengths     Json?
+  matchGaps          Json?
+  matchCalculatedAt  DateTime?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
 
-  // Relations
   job       Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
   candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
 
@@ -177,16 +57,89 @@ model Application {
   @@map("applications")
 }
 
+model Candidate {
+  id                Int       @id @default(autoincrement())
+  userId            Int       @unique
+  firstName         String
+  lastName          String
+  dateOfBirth       DateTime?
+  location          String?
+  experienceYears   Int       @default(0)
+  currentPosition   String?
+  currentCompany    String?
+  salaryExpectation Decimal?  @db.Decimal(10, 2)
+  currency          String    @default("USD")
+  availabilityDate  DateTime?
+  linkedinUrl       String?
+  githubUrl         String?
+  portfolioUrl      String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  applications     Application[]
+  candidateSkills  CandidateSkill[]
+
+  @@map("candidates")
+}
+
+model Job {
+  id                  Int             @id @default(autoincrement())
+  employerId          Int
+  title               String
+  description         String
+  requirements        String?
+  responsibilities    String?
+  location            String?
+  employmentType      EmploymentType
+  experienceLevel     ExperienceLevel
+  salaryMin           Decimal?        @db.Decimal(10, 2)
+  salaryMax           Decimal?        @db.Decimal(10, 2)
+  currency            String          @default("USD")
+  remoteAllowed       Boolean         @default(false)
+  isActive            Boolean         @default(true)
+  applicationDeadline DateTime?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  employer     Employer      @relation(fields: [employerId], references: [id], onDelete: Cascade)
+  applications Application[]
+  jobSkills    JobSkill[]
+
+  @@map("jobs")
+}
+
+model Employer {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @unique
+  companyName String
+  industry    String?
+  companySize String?
+  website     String?
+  description String?
+  logoUrl     String?
+  address     String?
+  city        String?
+  country     String?
+  foundedYear Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobs Job[]
+
+  @@map("employers")
+}
+
 model Session {
   id           Int      @id @default(autoincrement())
-  userId       Int      @map("user_id")
-  sessionToken String   @unique @map("session_token")
-  expiresAt    DateTime @map("expires_at")
-  ipAddress    String?  @map("ip_address")
-  userAgent    String?  @map("user_agent")
-  createdAt    DateTime @default(now()) @map("created_at")
+  userId       Int
+  sessionToken String   @unique
+  expiresAt    DateTime
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
 
-  // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("sessions")
@@ -194,30 +147,51 @@ model Session {
 
 model Notification {
   id        Int      @id @default(autoincrement())
-  userId    Int      @map("user_id")
+  userId    Int
   type      String
   title     String
   message   String
-  isRead    Boolean  @default(false) @map("is_read")
+  isRead    Boolean  @default(false)
   data      Json?
-  createdAt DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now())
 
-  // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("notifications")
 }
 
-model Permission {
-  id        Int      @id @default(autoincrement())
-  role      String
-  resource  String
-  action    String
-  allowed   Boolean  @default(true)
-  createdAt DateTime @default(now()) @map("created_at")
+enum Role {
+  candidate
+  employer
+  admin
+}
 
-  @@unique([role, resource, action])
-  @@map("permissions")
+enum EmploymentType {
+  full_time  @map("full-time")
+  part_time  @map("part-time")
+  contract
+  internship
+  freelance
+}
+
+enum ExperienceLevel {
+  entry
+  junior
+  mid
+  senior
+  lead
+  executive
+}
+
+enum ApplicationStatus {
+  pending
+  reviewed
+  shortlisted
+  interviewed
+  offered
+  accepted
+  rejected
+  withdrawn
 }
 
 model Skill {
@@ -225,41 +199,23 @@ model Skill {
   name        String   @unique
   category    String?
   description String?
-  createdAt   DateTime @default(now()) @map("created_at")
+  createdAt   DateTime @default(now())
 
-  // Relations
   candidateSkills CandidateSkill[]
   jobSkills       JobSkill[]
 
   @@map("skills")
 }
 
-model CandidateSkill {
-  id               Int             @id @default(autoincrement())
-  candidateId      Int             @map("candidate_id")
-  skillId          Int             @map("skill_id")
-  proficiencyLevel ProficiencyLevel @map("proficiency_level")
-  yearsExperience  Int             @default(0) @map("years_experience")
-  createdAt        DateTime        @default(now()) @map("created_at")
-
-  // Relations
-  candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-  skill     Skill     @relation(fields: [skillId], references: [id], onDelete: Cascade)
-
-  @@unique([candidateId, skillId])
-  @@map("candidate_skills")
-}
-
 model JobSkill {
-  id            Int             @id @default(autoincrement())
-  jobId         Int             @map("job_id")
-  skillId       Int             @map("skill_id")
-  requiredLevel ProficiencyLevel @map("required_level")
-  isRequired    Boolean         @default(true) @map("is_required")
-  weight        Decimal         @default(1.0) @db.Decimal(3, 2)
-  createdAt     DateTime        @default(now()) @map("created_at")
+  id            Int              @id @default(autoincrement())
+  jobId         Int
+  skillId       Int
+  requiredLevel ProficiencyLevel
+  isRequired    Boolean          @default(true)
+  weight        Decimal          @default(1.0) @db.Decimal(3, 2)
+  createdAt     DateTime         @default(now())
 
-  // Relations
   job   Job   @relation(fields: [jobId], references: [id], onDelete: Cascade)
   skill Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
 
@@ -267,44 +223,24 @@ model JobSkill {
   @@map("job_skills")
 }
 
-// Enums
-enum Role {
-  CANDIDATE @map("candidate")
-  EMPLOYER  @map("employer")
-  ADMIN     @map("admin")
-}
+model CandidateSkill {
+  id               Int              @id @default(autoincrement())
+  candidateId      Int
+  skillId          Int
+  proficiencyLevel ProficiencyLevel
+  yearsExperience  Int              @default(0)
+  createdAt        DateTime         @default(now())
 
-enum EmploymentType {
-  FULL_TIME  @map("full-time")
-  PART_TIME  @map("part-time")
-  CONTRACT   @map("contract")
-  INTERNSHIP @map("internship")
-  FREELANCE  @map("freelance")
-}
+  candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  skill     Skill     @relation(fields: [skillId], references: [id], onDelete: Cascade)
 
-enum ExperienceLevel {
-  ENTRY     @map("entry")
-  JUNIOR    @map("junior")
-  MID       @map("mid")
-  SENIOR    @map("senior")
-  LEAD      @map("lead")
-  EXECUTIVE @map("executive")
-}
-
-enum ApplicationStatus {
-  PENDING      @map("pending")
-  REVIEWED     @map("reviewed")
-  SHORTLISTED  @map("shortlisted")
-  INTERVIEWED  @map("interviewed")
-  OFFERED      @map("offered")
-  ACCEPTED     @map("accepted")
-  REJECTED     @map("rejected")
-  WITHDRAWN    @map("withdrawn")
+  @@unique([candidateId, skillId])
+  @@map("candidate_skills")
 }
 
 enum ProficiencyLevel {
-  BEGINNER     @map("beginner")
-  INTERMEDIATE @map("intermediate")
-  ADVANCED     @map("advanced")
-  EXPERT       @map("expert")
+  beginner
+  intermediate
+  advanced
+  expert
 }

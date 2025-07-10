@@ -22,7 +22,6 @@ const CandidateLayout = ({ children }) => {
     { name: 'Dashboard', href: '/candidate/dashboard', icon: HomeIcon },
     { name: 'Job Search', href: '/candidate/jobs', icon: MagnifyingGlassIcon },
     { name: 'Applications', href: '/candidate/applications', icon: DocumentTextIcon },
-    { name: 'Resume', href: '/candidate/resume', icon: DocumentTextIcon },
     { name: 'CV Builder', href: '/candidate/cv-builder', icon: DocumentTextIcon },
     { name: 'Settings', href: '/candidate/settings', icon: Cog6ToothIcon },
   ]

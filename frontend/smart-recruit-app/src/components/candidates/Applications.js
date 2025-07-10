@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import JobDetailsModal from '../common/JobDetailsModal';
+import CVModal from '../common/CVModal';
 import {
   DocumentTextIcon,
   BuildingOfficeIcon,
@@ -22,6 +23,8 @@ const Applications = () => {
   const [filter, setFilter] = useState('all'); // all, pending, accepted, rejected, interview
   const [selectedJob, setSelectedJob] = useState(null);
   const [showJobDetails, setShowJobDetails] = useState(false);
+  const [selectedCV, setSelectedCV] = useState(null);
+  const [showCVModal, setShowCVModal] = useState(false);
 
   useEffect(() => {
     fetchApplications();
@@ -30,11 +33,44 @@ const Applications = () => {
   const fetchApplications = async () => {
     try {
       setLoading(true);
-      // This would be the actual API call when applications are implemented
-      // const response = await api.get('/applications/my-applications');
-      
-      // For now, show mock data
-      const mockApplications = [
+      // Make the actual API call to get applications
+      const response = await api.get('/applications');
+      console.log('Candidate Applications API Response:', response.data);
+
+      // Handle different response structures
+      const applicationsData = response.data.data?.applications || response.data.applications || [];
+
+      // Transform the data to match the expected format
+      const transformedApplications = applicationsData.map(app => ({
+        id: app.id,
+        jobTitle: app.jobTitle || 'Unknown Position',
+        title: app.jobTitle || 'Unknown Position', // For modal compatibility
+        company: app.companyName || 'Unknown Company',
+        companyLogo: null,
+        status: app.status,
+        appliedAt: app.appliedDate || app.appliedAt,
+        lastUpdated: app.appliedDate || app.appliedAt,
+        jobLocation: 'Remote', // Default for now
+        location: 'Remote', // For modal compatibility
+        employmentType: 'Full-time',
+        salary: 'Competitive',
+        matchScore: app.matchScore || 0,
+        coverLetter: app.coverLetter,
+        cvSnapshot: app.cvSnapshot,
+        matchAnalysis: app.matchAnalysis,
+        matchStrengths: app.matchStrengths,
+        matchGaps: app.matchGaps,
+        // Additional fields for display
+        description: `Applied for ${app.jobTitle || 'position'} at ${app.companyName || 'company'}`,
+        requirements: 'View job details for requirements',
+        responsibilities: 'View job details for responsibilities'
+      }));
+
+      setApplications(transformedApplications);
+
+      // Fallback mock data if no real applications
+      if (transformedApplications.length === 0) {
+        const mockApplications = [
         {
           id: 1,
           jobTitle: 'Senior Full Stack Developer',
@@ -109,8 +145,9 @@ const Applications = () => {
           feedback: 'Thank you for your interest. We decided to move forward with another candidate.'
         }
       ];
-      
+
       setApplications(mockApplications);
+      }
     } catch (error) {
       console.error('Error fetching applications:', error);
       toast.error('Failed to load applications');
@@ -127,6 +164,16 @@ const Applications = () => {
   const handleViewJobDetails = (application) => {
     setSelectedJob(application);
     setShowJobDetails(true);
+  };
+
+  const handleViewCV = (application) => {
+    setSelectedCV(application);
+    setShowCVModal(true);
+  };
+
+  const closeCVModal = () => {
+    setShowCVModal(false);
+    setSelectedCV(null);
   };
 
   const getStatusBadge = (status) => {
@@ -323,6 +370,35 @@ const Applications = () => {
                     <div className="text-sm text-gray-600 mt-1">
                       Salary: {application.salary}
                     </div>
+
+                    {/* Match Score Display */}
+                    {application.matchScore > 0 && (
+                      <div className="mt-2">
+                        <div className="flex items-center">
+                          <span className="text-sm font-medium text-gray-700 mr-2">Match Score:</span>
+                          <div className="flex items-center">
+                            <span className={`text-sm font-bold mr-2 ${
+                              application.matchScore >= 80 ? 'text-green-600' :
+                              application.matchScore >= 60 ? 'text-yellow-600' : 'text-red-600'
+                            }`}>
+                              {application.matchScore}%
+                            </span>
+                            <div className="w-20 bg-gray-200 rounded-full h-2">
+                              <div
+                                className={`h-2 rounded-full ${
+                                  application.matchScore >= 80 ? 'bg-green-500' :
+                                  application.matchScore >= 60 ? 'bg-yellow-500' : 'bg-red-500'
+                                }`}
+                                style={{ width: `${application.matchScore}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        </div>
+                        {application.matchAnalysis && (
+                          <p className="text-xs text-gray-600 mt-1">{application.matchAnalysis}</p>
+                        )}
+                      </div>
+                    )}
                   </div>
                   
                   <div className="flex items-center space-x-2">
@@ -333,8 +409,42 @@ const Applications = () => {
                     >
                       <EyeIcon className="h-5 w-5" />
                     </button>
+                    <button
+                      onClick={() => handleViewCV(application)}
+                      className="p-2 text-gray-400 hover:text-green-600 transition-colors"
+                      title="View My CV"
+                    >
+                      <DocumentTextIcon className="h-5 w-5" />
+                    </button>
                   </div>
                 </div>
+
+                {/* CV Snapshot Information */}
+                {application.cvSnapshot && (
+                  <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                    <h4 className="text-sm font-medium text-gray-900 mb-2">CV Submitted:</h4>
+                    <div className="grid grid-cols-2 gap-4 text-xs text-gray-600">
+                      <div>
+                        <span className="font-medium">Name:</span> {application.cvSnapshot.first_name} {application.cvSnapshot.last_name}
+                      </div>
+                      <div>
+                        <span className="font-medium">Email:</span> {application.cvSnapshot.email}
+                      </div>
+                      <div>
+                        <span className="font-medium">Phone:</span> {application.cvSnapshot.phone}
+                      </div>
+                      <div>
+                        <span className="font-medium">Template:</span> {application.cvSnapshot.selected_template}
+                      </div>
+                    </div>
+                    {application.cvSnapshot.professional_summary && (
+                      <div className="mt-2">
+                        <span className="font-medium text-xs text-gray-700">Summary:</span>
+                        <p className="text-xs text-gray-600 mt-1">{application.cvSnapshot.professional_summary}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Application Details */}
                 {application.applicationNotes && (
@@ -403,6 +513,15 @@ const Applications = () => {
         isOpen={showJobDetails}
         onClose={() => setShowJobDetails(false)}
         showApplyButton={false}
+      />
+
+      {/* CV Modal */}
+      <CVModal
+        isOpen={showCVModal}
+        onClose={closeCVModal}
+        cvSnapshot={selectedCV?.cvSnapshot}
+        candidateName={selectedCV?.cvSnapshot ? `${selectedCV.cvSnapshot.first_name} ${selectedCV.cvSnapshot.last_name}` : 'Unknown'}
+        jobTitle={selectedCV?.jobTitle}
       />
     </div>
   );
