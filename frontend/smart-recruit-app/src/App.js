@@ -21,6 +21,7 @@ import CandidateSettingsPage from './pages/candidate/SettingsPage'
 import EmployerDashboard from './components/dashboards/EmployerDashboard'
 import JobsPage from './pages/employer/JobsPage'
 import CandidatesPage from './pages/employer/CandidatesPage'
+import JobCandidatesPage from './pages/employer/JobCandidatesPage'
 import EmployerSettingsPage from './pages/employer/SettingsPage'
 import AdminDashboard from './components/dashboards/AdminDashboard'
 
@@ -91,6 +92,7 @@ const AppContent = () => {
               <Routes>
                 <Route path="dashboard" element={<EmployerDashboard />} />
                 <Route path="jobs" element={<JobsPage />} />
+                <Route path="jobs/:jobId/candidates" element={<JobCandidatesPage />} />
                 <Route path="candidates" element={<CandidatesPage />} />
                 <Route path="settings" element={<EmployerSettingsPage />} />
                 <Route path="" element={<Navigate to="dashboard" replace />} />

@@ -330,10 +330,11 @@ const JobsPage = () => {
                         <PencilIcon className="h-4 w-4" />
                       </button>
                       <button
+                        onClick={() => navigate(`/employer/jobs/${job.id}/candidates`)}
                         className="text-green-600 hover:text-green-900"
-                        title="View Applications"
+                        title="View Candidates"
                       >
-                        <EyeIcon className="h-4 w-4" />
+                        <UserGroupIcon className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => handleDeleteJob(job.id)}

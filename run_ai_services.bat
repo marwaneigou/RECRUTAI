@@ -36,6 +36,7 @@ timeout /t 2 /nobreak >nul
 
 echo 🚀 Starting Analysis Service (Port 5002) - CV Improvements...
 start "Analysis Service" cmd /k "cd services\analysis-service && echo 🚀 Starting Analysis Service for CV Improvements... && python app.py"
+start "Analysis Service" cmd /k "cd services\matching-service && echo 🚀 Starting matching-service ... && python app.py"
 
 echo.
 echo ========================================

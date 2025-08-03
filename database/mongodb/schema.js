@@ -105,13 +105,175 @@ db.createCollection("resumes", {
   }
 });
 
+// Collection: cv_data
+// Stores candidate CV/resume data (moved from PostgreSQL cv_data table)
+db.createCollection("cv_data", {
+  validator: {
+    $jsonSchema: {
+      bsonType: "object",
+      required: ["candidateId", "createdAt"],
+      properties: {
+        candidateId: {
+          bsonType: "int",
+          description: "Reference to PostgreSQL candidates.id"
+        },
+        selectedTemplate: {
+          bsonType: "string",
+          description: "CV template selected by candidate"
+        },
+        firstName: { bsonType: "string" },
+        lastName: { bsonType: "string" },
+        email: { bsonType: "string" },
+        phone: { bsonType: "string" },
+        address: { bsonType: "string" },
+        city: { bsonType: "string" },
+        country: { bsonType: "string" },
+        linkedinUrl: { bsonType: "string" },
+        githubUrl: { bsonType: "string" },
+        portfolioUrl: { bsonType: "string" },
+        professionalSummary: { bsonType: "string" },
+        technicalSkills: { bsonType: "string" },
+        softSkills: { bsonType: "string" },
+        languages: { bsonType: "string" },
+        workExperience: {
+          bsonType: "array",
+          items: {
+            bsonType: "object",
+            properties: {
+              id: { bsonType: "int" },
+              jobTitle: { bsonType: "string" },
+              company: { bsonType: "string" },
+              location: { bsonType: "string" },
+              startDate: { bsonType: "string" },
+              endDate: { bsonType: "string" },
+              current: { bsonType: "bool" },
+              description: { bsonType: "string" }
+            }
+          }
+        },
+        education: {
+          bsonType: "array",
+          items: {
+            bsonType: "object",
+            properties: {
+              id: { bsonType: "int" },
+              degree: { bsonType: "string" },
+              institution: { bsonType: "string" },
+              location: { bsonType: "string" },
+              graduationDate: { bsonType: "string" },
+              gpa: { bsonType: "string" },
+              description: { bsonType: "string" }
+            }
+          }
+        },
+        projects: {
+          bsonType: "array",
+          items: {
+            bsonType: "object",
+            properties: {
+              id: { bsonType: "int" },
+              name: { bsonType: "string" },
+              description: { bsonType: "string" },
+              technologies: { bsonType: "string" },
+              url: { bsonType: "string" },
+              startDate: { bsonType: "string" },
+              endDate: { bsonType: "string" }
+            }
+          }
+        },
+        certifications: {
+          bsonType: "array",
+          items: {
+            bsonType: "object",
+            properties: {
+              id: { bsonType: "int" },
+              name: { bsonType: "string" },
+              issuer: { bsonType: "string" },
+              date: { bsonType: "string" },
+              url: { bsonType: "string" }
+            }
+          }
+        },
+        isComplete: {
+          bsonType: "bool",
+          description: "Whether the CV is complete and ready for use"
+        },
+        lastGenerated: {
+          bsonType: "date",
+          description: "When the CV was last generated"
+        },
+        createdAt: {
+          bsonType: "date",
+          description: "When the CV data was created"
+        },
+        updatedAt: {
+          bsonType: "date",
+          description: "When the CV data was last updated"
+        }
+      }
+    }
+  }
+});
+
+// Collection: cv_snapshots
+// Stores CV snapshots for job applications (moved from PostgreSQL applications.cv_snapshot)
+db.createCollection("cv_snapshots", {
+  validator: {
+    $jsonSchema: {
+      bsonType: "object",
+      required: ["applicationId", "candidateId", "jobId", "cvData", "createdAt"],
+      properties: {
+        applicationId: {
+          bsonType: "int",
+          description: "Reference to PostgreSQL applications.id"
+        },
+        candidateId: {
+          bsonType: "int",
+          description: "Reference to PostgreSQL candidates.id"
+        },
+        jobId: {
+          bsonType: "int",
+          description: "Reference to PostgreSQL jobs.id"
+        },
+        cvData: {
+          bsonType: "object",
+          description: "Complete CV data snapshot at time of application"
+        },
+        customizations: {
+          bsonType: "object",
+          description: "Job-specific CV customizations",
+          properties: {
+            highlightedSkills: {
+              bsonType: "array",
+              items: { bsonType: "string" }
+            },
+            customSummary: { bsonType: "string" },
+            reorderedSections: {
+              bsonType: "array",
+              items: { bsonType: "string" }
+            },
+            emphasizedProjects: {
+              bsonType: "array",
+              items: { bsonType: "int" }
+            }
+          }
+        },
+        createdAt: {
+          bsonType: "date",
+          description: "When the CV snapshot was created"
+        }
+      }
+    }
+  }
+});
+
 // Collection: cover_letters
-// Stores cover letters and AI analysis
+// Stores cover letters and AI analysis (moved from PostgreSQL applications table)
 db.createCollection("cover_letters", {
   validator: {
     $jsonSchema: {
       bsonType: "object",
-      required: ["applicationId", "content", "createdAt"],
+      required: ["applicationId", "candidateId", "jobId", "content", "createdAt"],
       properties: {
         applicationId: {
           bsonType: "int",
@@ -129,9 +291,22 @@ db.createCollection("cover_letters", {
           bsonType: "string",
           description: "Cover letter content"
         },
+        type: {
+          bsonType: "string",
+          enum: ["user_written", "ai_generated", "template_based"],
+          description: "How the cover letter was created"
+        },
+        template: {
+          bsonType: "string",
+          description: "Template used if applicable"
+        },
         createdAt: {
           bsonType: "date",
           description: "When the cover letter was created"
+        },
+        updatedAt: {
+          bsonType: "date",
+          description: "When the cover letter was last updated"
         },
         aiAnalysis: {
           bsonType: "object",

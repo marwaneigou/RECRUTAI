@@ -212,10 +212,13 @@ export const applicationsAPI = {
     }
   },
 
-  // Apply to job
+  // Apply to job (with MongoDB cover letter storage)
   applyToJob: async (jobId, applicationData) => {
     try {
-      const response = await api.post(`/applications/apply/${jobId}`, applicationData)
+      const response = await api.post('/applications/submit', {
+        jobId,
+        ...applicationData
+      })
       return response
     } catch (error) {
       throw error
@@ -256,6 +259,82 @@ export const usersAPI = {
           'Content-Type': 'multipart/form-data'
         }
       })
+      return response
+    } catch (error) {
+      throw error
+    }
+  }
+}
+
+// AI Features API
+export const aiAPI = {
+  // Get AI-powered job recommendations for candidate
+  getJobRecommendations: async (params = {}) => {
+    try {
+      const response = await api.get('/ai/job-recommendations', { params })
+      return response
+    } catch (error) {
+      throw error
+    }
+  },
+
+  // Get job matches (existing endpoint)
+  getJobMatches: async (params = {}) => {
+    try {
+      const response = await api.get('/ai/job-matches', { params })
+      return response
+    } catch (error) {
+      throw error
+    }
+  },
+
+  // Generate cover letter
+  generateCoverLetter: async (jobId, template = 'professional') => {
+    try {
+      const response = await api.post('/ai/generate-cover-letter', {
+        jobId,
+        template
+      })
+      return response
+    } catch (error) {
+      throw error
+    }
+  },
+
+  // Track recommendation interaction
+  trackRecommendationInteraction: async (jobId, action, matchScore = null, metadata = {}) => {
+    try {
+      const response = await api.post('/ai/track-recommendation-interaction', {
+        jobId,
+        action,
+        matchScore,
+        metadata
+      })
+      return response
+    } catch (error) {
+      throw error
+    }
+  },
+
+  // Submit recommendation feedback
+  submitRecommendationFeedback: async (jobId, rating, feedback = '', improvementSuggestions = []) => {
+    try {
+      const response = await api.post('/ai/recommendation-feedback', {
+        jobId,
+        rating,
+        feedback,
+        improvementSuggestions
+      })
+      return response
+    } catch (error) {
+      throw error
+    }
+  },
+
+  // Get recommendation analytics (admin only)
+  getRecommendationAnalytics: async (params = {}) => {
+    try {
+      const response = await api.get('/ai/recommendation-analytics', { params })
       return response
     } catch (error) {
       throw error

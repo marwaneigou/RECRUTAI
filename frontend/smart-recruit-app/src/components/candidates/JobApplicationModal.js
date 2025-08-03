@@ -278,7 +278,7 @@ const JobApplicationModal = ({ job, isOpen, onClose, onApplicationSubmitted }) =
         })
       }
 
-      await api.post('/applications', applicationData)
+      await api.post('/applications/submit', applicationData)
       toast.success('Application submitted successfully!')
       onApplicationSubmitted()
       onClose()

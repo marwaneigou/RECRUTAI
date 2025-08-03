@@ -3,6 +3,7 @@ const { PrismaClient } = require('@prisma/client');
 const { authenticateToken, authorizeRoles } = require('../middleware/auth');
 const { body, validationResult } = require('express-validator');
 const { logger } = require('../utils/logger');
+const { mongoService } = require('../config/database');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -669,5 +670,148 @@ router.delete('/:id', authenticateToken, authorizeRoles(['employer']), async (re
     });
   }
 });
+
+// Get all applications for a specific job (for employers)
+router.get('/:id/applications', authenticateToken, authorizeRoles(['employer']), async (req, res) => {
+  try {
+    const { id } = req.params
+    const userId = req.user.id
+
+    console.log('🔍 Job applications request:', { jobId: id, userId, userRole: req.user.role })
+
+    // First, find the employer record for this user
+    const employer = await prisma.employer.findFirst({
+      where: { userId: userId }
+    })
+
+    if (!employer) {
+      console.log('❌ No employer record found for user:', userId)
+      return res.status(403).json({
+        success: false,
+        error: { code: 'NOT_EMPLOYER', message: 'User is not an employer' }
+      })
+    }
+
+    console.log('✅ Found employer:', employer.id)
+
+    // Check if job exists and belongs to employer
+    const job = await prisma.job.findFirst({
+      where: {
+        id: parseInt(id),
+        employerId: employer.id
+      },
+      include: {
+        employer: {
+          select: { id: true, companyName: true }
+        }
+      }
+    })
+
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'JOB_NOT_FOUND', message: 'Job not found' }
+      })
+    }
+
+    // Get all applications for this job
+    const rawApplications = await prisma.application.findMany({
+      where: {
+        jobId: parseInt(id)
+      },
+      include: {
+        candidate: {
+          include: {
+            user: {
+              select: { id: true, name: true, email: true }
+            }
+          }
+        }
+      },
+      orderBy: {
+        appliedAt: 'desc'
+      }
+    })
+
+    // Format applications and fetch MongoDB data
+    const applicationsWithMongoData = await Promise.all(
+      rawApplications.map(async (app) => {
+        let coverLetter = null
+        let cvSnapshot = null
+
+        // Fetch cover letter from MongoDB
+        if (app.coverLetterId) {
+          try {
+            const coverLetterDoc = await mongoService.getCoverLetterById(app.coverLetterId)
+            coverLetter = coverLetterDoc
+          } catch (error) {
+            console.error('Error fetching cover letter:', error)
+          }
+        }
+
+        // Fetch CV snapshot from MongoDB
+        if (app.cvSnapshotId) {
+          try {
+            const cvSnapshotDoc = await mongoService.getCvSnapshotById(app.cvSnapshotId)
+            cvSnapshot = cvSnapshotDoc
+          } catch (error) {
+            console.error('Error fetching CV snapshot:', error)
+          }
+        }
+
+        return {
+          id: app.id,
+          candidateId: app.candidateId,
+          candidateName: app.candidate?.user?.name || 'Unknown',
+          email: app.candidate?.user?.email || 'Unknown',
+          appliedDate: app.appliedAt.toISOString().split('T')[0],
+          status: app.status,
+          matchScore: app.matchScore || 0,
+          coverLetter: coverLetter,
+          cvSnapshot: cvSnapshot,
+          matchAnalysis: app.matchAnalysis,
+          matchStrengths: app.matchStrengths,
+          matchGaps: app.matchGaps,
+          matchCalculatedAt: app.matchCalculatedAt,
+          notes: app.notes,
+          rating: app.rating,
+          reviewedAt: app.reviewedAt,
+          createdAt: app.createdAt,
+          updatedAt: app.updatedAt
+        }
+      })
+    )
+
+    console.log(`📋 Retrieved ${applicationsWithMongoData.length} applications for job ${id}`)
+
+    res.json({
+      success: true,
+      data: {
+        job: {
+          id: job.id,
+          title: job.title,
+          description: job.description,
+          location: job.location,
+          employmentType: job.employmentType,
+          salaryMin: job.salaryMin,
+          salaryMax: job.salaryMax,
+          currency: job.currency,
+          companyName: job.employer.companyName
+        },
+        applications: applicationsWithMongoData,
+        pagination: {
+          total: applicationsWithMongoData.length
+        }
+      }
+    })
+
+  } catch (error) {
+    console.error('Error fetching job applications:', error)
+    res.status(500).json({
+      success: false,
+      error: { code: 'FETCH_FAILED', message: 'Failed to fetch job applications' }
+    })
+  }
+})
 
 module.exports = router;

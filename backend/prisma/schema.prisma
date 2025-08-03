@@ -35,13 +35,12 @@ model Application {
   jobId              Int
   candidateId        Int
   status             ApplicationStatus @default(pending)
-  coverLetter        String?
-  cvUrl              String?
+  coverLetterId      String?           // Reference to MongoDB cover letter document
+  cvSnapshotId       String?           // Reference to MongoDB CV snapshot document
   appliedAt          DateTime          @default(now())
   reviewedAt         DateTime?
   notes              String?
   rating             Int?              @db.SmallInt
-  cvSnapshot         Json?
   matchScore         Int?
   matchAnalysis      String?
   matchStrengths     Json?
@@ -73,6 +72,7 @@ model Candidate {
   linkedinUrl       String?
   githubUrl         String?
   portfolioUrl      String?
+  cvDataId          String?   // Reference to MongoDB CV data document
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 

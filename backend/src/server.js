@@ -23,6 +23,7 @@ const employerRoutes = require('./routes/employers')
 const skillRoutes = require('./routes/skills')
 const notificationRoutes = require('./routes/notifications')
 const cvRoutes = require('./routes/cv')
+const aiFeaturesRoutes = require('./routes/ai-features')
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -105,6 +106,7 @@ app.use('/api/employers', employerRoutes)
 app.use('/api/skills', skillRoutes)
 app.use('/api/notifications', notificationRoutes)
 app.use('/api/cv', cvRoutes)
+app.use('/api/ai', aiFeaturesRoutes)
 app.use('/api/stats', require('./routes/stats'))
 
 // Swagger documentation (only in development)

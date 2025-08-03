@@ -13,7 +13,9 @@ import {
   XCircleIcon,
   ExclamationTriangleIcon,
   EyeIcon,
-  ChatBubbleLeftRightIcon
+  ChatBubbleLeftRightIcon,
+  EnvelopeIcon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 
 const Applications = () => {
@@ -25,9 +27,30 @@ const Applications = () => {
   const [showJobDetails, setShowJobDetails] = useState(false);
   const [selectedCV, setSelectedCV] = useState(null);
   const [showCVModal, setShowCVModal] = useState(false);
+  const [selectedCoverLetter, setSelectedCoverLetter] = useState(null);
+  const [showCoverLetterModal, setShowCoverLetterModal] = useState(false);
 
   useEffect(() => {
     fetchApplications();
+  }, [])
+
+  // Check for status changes (could be enhanced with real-time updates)
+  useEffect(() => {
+    const checkForStatusUpdates = () => {
+      const lastCheck = localStorage.getItem('lastStatusCheck')
+      const now = new Date().getTime()
+
+      if (lastCheck && (now - parseInt(lastCheck)) < 60000) { // Check every minute
+        return
+      }
+
+      // Fetch latest applications to check for status changes
+      fetchApplications()
+      localStorage.setItem('lastStatusCheck', now.toString())
+    }
+
+    const interval = setInterval(checkForStatusUpdates, 60000) // Check every minute
+    return () => clearInterval(interval)
   }, []);
 
   const fetchApplications = async () => {
@@ -43,111 +66,35 @@ const Applications = () => {
       // Transform the data to match the expected format
       const transformedApplications = applicationsData.map(app => ({
         id: app.id,
+        jobId: app.jobId,
         jobTitle: app.jobTitle || 'Unknown Position',
         title: app.jobTitle || 'Unknown Position', // For modal compatibility
         company: app.companyName || 'Unknown Company',
         companyLogo: null,
         status: app.status,
         appliedAt: app.appliedDate || app.appliedAt,
-        lastUpdated: app.appliedDate || app.appliedAt,
-        jobLocation: 'Remote', // Default for now
-        location: 'Remote', // For modal compatibility
-        employmentType: 'Full-time',
-        salary: 'Competitive',
+        lastUpdated: app.updatedAt || app.appliedDate || app.appliedAt,
+        jobLocation: app.location || 'Remote',
+        location: app.location || 'Remote', // For modal compatibility
+        employmentType: app.employmentType || 'Full-time',
+        salary: app.salaryRange || 'Competitive',
         matchScore: app.matchScore || 0,
         coverLetter: app.coverLetter,
         cvSnapshot: app.cvSnapshot,
         matchAnalysis: app.matchAnalysis,
         matchStrengths: app.matchStrengths,
         matchGaps: app.matchGaps,
+        notes: app.notes,
+        rating: app.rating,
+        reviewedAt: app.reviewedAt,
         // Additional fields for display
         description: `Applied for ${app.jobTitle || 'position'} at ${app.companyName || 'company'}`,
         requirements: 'View job details for requirements',
         responsibilities: 'View job details for responsibilities'
       }));
 
+      console.log('Transformed applications:', transformedApplications);
       setApplications(transformedApplications);
-
-      // Fallback mock data if no real applications
-      if (transformedApplications.length === 0) {
-        const mockApplications = [
-        {
-          id: 1,
-          jobTitle: 'Senior Full Stack Developer',
-          title: 'Senior Full Stack Developer', // For modal compatibility
-          company: 'TechCorp Solutions',
-          companyLogo: null,
-          status: 'pending',
-          appliedAt: '2025-06-20T10:30:00Z',
-          lastUpdated: '2025-06-20T10:30:00Z',
-          jobLocation: 'Paris, France',
-          location: 'Paris, France', // For modal compatibility
-          employmentType: 'Full-time',
-          salary: '60k - 80k EUR',
-          salaryMin: 60,
-          salaryMax: 80,
-          currency: 'EUR',
-          experienceLevel: 'Senior',
-          remote: false,
-          description: 'We are looking for a Senior Full Stack Developer to join our dynamic team. You will be responsible for developing and maintaining web applications using modern technologies like React, Node.js, and PostgreSQL. The ideal candidate should have strong problem-solving skills and experience with agile development methodologies.',
-          requirements: '• 5+ years of experience in full-stack development\n• Proficiency in React, Node.js, and PostgreSQL\n• Experience with RESTful APIs and microservices\n• Knowledge of Git and CI/CD pipelines\n• Strong communication skills',
-          skills: ['React', 'Node.js', 'PostgreSQL', 'JavaScript', 'TypeScript', 'Git'],
-          benefits: ['Health insurance', 'Flexible working hours', 'Remote work options', 'Professional development budget'],
-          applicationNotes: 'Applied through company website',
-          interviewDate: null,
-          feedback: null,
-          createdAt: '2025-06-15T09:00:00Z',
-          applicationDeadline: '2025-07-15T23:59:59Z'
-        },
-        {
-          id: 2,
-          jobTitle: 'Frontend React Developer',
-          company: 'Innovate Digital',
-          companyLogo: null,
-          status: 'interview',
-          appliedAt: '2025-06-18T14:15:00Z',
-          lastUpdated: '2025-06-21T09:00:00Z',
-          jobLocation: 'Remote',
-          employmentType: 'Full-time',
-          salary: '50k - 65k EUR',
-          applicationNotes: 'Referred by John Doe',
-          interviewDate: '2025-06-25T14:00:00Z',
-          feedback: 'Great portfolio! Looking forward to the interview.'
-        },
-        {
-          id: 3,
-          jobTitle: 'Python Backend Developer',
-          company: 'StartupXYZ',
-          companyLogo: null,
-          status: 'accepted',
-          appliedAt: '2025-06-15T16:45:00Z',
-          lastUpdated: '2025-06-22T11:30:00Z',
-          jobLocation: 'Lyon, France',
-          employmentType: 'Full-time',
-          salary: '55k - 70k EUR',
-          applicationNotes: 'Applied after networking event',
-          interviewDate: null,
-          feedback: 'Congratulations! We would like to offer you the position.'
-        },
-        {
-          id: 4,
-          jobTitle: 'Data Scientist',
-          company: 'DataCorp',
-          companyLogo: null,
-          status: 'rejected',
-          appliedAt: '2025-06-10T12:20:00Z',
-          lastUpdated: '2025-06-19T15:45:00Z',
-          jobLocation: 'Toulouse, France',
-          employmentType: 'Full-time',
-          salary: '65k - 85k EUR',
-          applicationNotes: 'Applied through LinkedIn',
-          interviewDate: null,
-          feedback: 'Thank you for your interest. We decided to move forward with another candidate.'
-        }
-      ];
-
-      setApplications(mockApplications);
-      }
     } catch (error) {
       console.error('Error fetching applications:', error);
       toast.error('Failed to load applications');
@@ -174,6 +121,16 @@ const Applications = () => {
   const closeCVModal = () => {
     setShowCVModal(false);
     setSelectedCV(null);
+  };
+
+  const handleViewCoverLetter = (application) => {
+    setSelectedCoverLetter(application);
+    setShowCoverLetterModal(true);
+  };
+
+  const closeCoverLetterModal = () => {
+    setShowCoverLetterModal(false);
+    setSelectedCoverLetter(null);
   };
 
   const getStatusBadge = (status) => {
@@ -352,6 +309,13 @@ const Applications = () => {
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="text-xl font-semibold text-gray-900">{application.jobTitle}</h3>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        (application.matchScore || 0) >= 80 ? 'bg-green-100 text-green-800' :
+                        (application.matchScore || 0) >= 60 ? 'bg-yellow-100 text-yellow-800' :
+                        (application.matchScore || 0) >= 40 ? 'bg-orange-100 text-orange-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {application.matchScore || 0}% Match
+                      </span>
                       {getStatusBadge(application.status)}
                     </div>
                     <div className="flex items-center text-sm text-gray-600 space-x-4">
@@ -372,33 +336,36 @@ const Applications = () => {
                     </div>
 
                     {/* Match Score Display */}
-                    {application.matchScore > 0 && (
-                      <div className="mt-2">
+                    <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-gray-700">Match Score:</span>
                         <div className="flex items-center">
-                          <span className="text-sm font-medium text-gray-700 mr-2">Match Score:</span>
-                          <div className="flex items-center">
-                            <span className={`text-sm font-bold mr-2 ${
-                              application.matchScore >= 80 ? 'text-green-600' :
-                              application.matchScore >= 60 ? 'text-yellow-600' : 'text-red-600'
-                            }`}>
-                              {application.matchScore}%
-                            </span>
-                            <div className="w-20 bg-gray-200 rounded-full h-2">
-                              <div
-                                className={`h-2 rounded-full ${
-                                  application.matchScore >= 80 ? 'bg-green-500' :
-                                  application.matchScore >= 60 ? 'bg-yellow-500' : 'bg-red-500'
-                                }`}
-                                style={{ width: `${application.matchScore}%` }}
-                              ></div>
-                            </div>
+                          <span className={`text-lg font-bold mr-3 ${
+                            (application.matchScore || 0) >= 80 ? 'text-green-600' :
+                            (application.matchScore || 0) >= 60 ? 'text-yellow-600' :
+                            (application.matchScore || 0) >= 40 ? 'text-orange-600' : 'text-red-600'
+                          }`}>
+                            {application.matchScore || 0}%
+                          </span>
+                          <div className="w-24 bg-gray-200 rounded-full h-3">
+                            <div
+                              className={`h-3 rounded-full transition-all duration-300 ${
+                                (application.matchScore || 0) >= 80 ? 'bg-green-500' :
+                                (application.matchScore || 0) >= 60 ? 'bg-yellow-500' :
+                                (application.matchScore || 0) >= 40 ? 'bg-orange-500' : 'bg-red-500'
+                              }`}
+                              style={{ width: `${application.matchScore || 0}%` }}
+                            ></div>
                           </div>
                         </div>
-                        {application.matchAnalysis && (
-                          <p className="text-xs text-gray-600 mt-1">{application.matchAnalysis}</p>
-                        )}
                       </div>
-                    )}
+                      {application.matchAnalysis && (
+                        <p className="text-xs text-gray-600 mt-2">{application.matchAnalysis}</p>
+                      )}
+                      {(application.matchScore || 0) === 0 && (
+                        <p className="text-xs text-gray-500 mt-1">Match score will be calculated after review</p>
+                      )}
+                    </div>
                   </div>
                   
                   <div className="flex items-center space-x-2">
@@ -416,35 +383,18 @@ const Applications = () => {
                     >
                       <DocumentTextIcon className="h-5 w-5" />
                     </button>
+                    {application.coverLetter?.content && (
+                      <button
+                        onClick={() => handleViewCoverLetter(application)}
+                        className="p-2 text-gray-400 hover:text-purple-600 transition-colors"
+                        title="View My Cover Letter"
+                      >
+                        <EnvelopeIcon className="h-5 w-5" />
+                      </button>
+                    )}
                   </div>
                 </div>
 
-                {/* CV Snapshot Information */}
-                {application.cvSnapshot && (
-                  <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                    <h4 className="text-sm font-medium text-gray-900 mb-2">CV Submitted:</h4>
-                    <div className="grid grid-cols-2 gap-4 text-xs text-gray-600">
-                      <div>
-                        <span className="font-medium">Name:</span> {application.cvSnapshot.first_name} {application.cvSnapshot.last_name}
-                      </div>
-                      <div>
-                        <span className="font-medium">Email:</span> {application.cvSnapshot.email}
-                      </div>
-                      <div>
-                        <span className="font-medium">Phone:</span> {application.cvSnapshot.phone}
-                      </div>
-                      <div>
-                        <span className="font-medium">Template:</span> {application.cvSnapshot.selected_template}
-                      </div>
-                    </div>
-                    {application.cvSnapshot.professional_summary && (
-                      <div className="mt-2">
-                        <span className="font-medium text-xs text-gray-700">Summary:</span>
-                        <p className="text-xs text-gray-600 mt-1">{application.cvSnapshot.professional_summary}</p>
-                      </div>
-                    )}
-                  </div>
-                )}
 
                 {/* Application Details */}
                 {application.applicationNotes && (
@@ -523,6 +473,99 @@ const Applications = () => {
         candidateName={selectedCV?.cvSnapshot ? `${selectedCV.cvSnapshot.first_name} ${selectedCV.cvSnapshot.last_name}` : 'Unknown'}
         jobTitle={selectedCV?.jobTitle}
       />
+
+      {/* Cover Letter Modal */}
+      {showCoverLetterModal && selectedCoverLetter && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={closeCoverLetterModal} />
+
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+              {/* Header */}
+              <div className="bg-white px-6 py-4 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-medium text-gray-900">
+                    My Cover Letter
+                  </h3>
+                  <button
+                    onClick={closeCoverLetterModal}
+                    className="bg-white rounded-md text-gray-400 hover:text-gray-600"
+                  >
+                    <XMarkIcon className="w-6 h-6" />
+                  </button>
+                </div>
+                <p className="text-sm text-gray-500 mt-1">
+                  Applied for: {selectedCoverLetter.jobTitle} at {selectedCoverLetter.company}
+                </p>
+              </div>
+
+              {/* Content */}
+              <div className="bg-white px-6 py-6">
+                <div className="space-y-4">
+                  {/* Cover Letter Content */}
+                  <div>
+                    <div className="bg-gray-50 p-4 rounded-lg border">
+                      <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">
+                        {selectedCoverLetter.coverLetter?.content || 'No cover letter content available'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Metadata */}
+                  <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Type</p>
+                      <p className="text-sm text-gray-900">
+                        {selectedCoverLetter.coverLetter?.type === 'user_written' ? 'User Written' :
+                         selectedCoverLetter.coverLetter?.type === 'ai_generated' ? 'AI Generated' :
+                         'Unknown'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Length</p>
+                      <p className="text-sm text-gray-900">
+                        {selectedCoverLetter.coverLetter?.content?.length || 0} characters
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Application Info */}
+                  <div className="pt-4 border-t border-gray-200">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="font-medium text-gray-500">Applied:</span> {selectedCoverLetter.appliedAt}
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-500">Status:</span>
+                        <span className={`ml-1 px-2 py-1 rounded-full text-xs ${
+                          selectedCoverLetter.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          selectedCoverLetter.status === 'accepted' ? 'bg-green-100 text-green-800' :
+                          selectedCoverLetter.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {selectedCoverLetter.status}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
+                <div className="flex justify-end">
+                  <button
+                    onClick={closeCoverLetterModal}
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

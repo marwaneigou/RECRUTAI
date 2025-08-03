@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticateToken, authorizeRoles } = require('../middleware/auth');
 const { PrismaClient } = require('@prisma/client');
+const { mongoService } = require('../config/database');
 const fs = require('fs').promises;
 const path = require('path');
 const { exec } = require('child_process');
@@ -390,8 +391,7 @@ router.get('/cv-data', authenticateToken, authorizeRoles(['candidate']), async (
 
     // Get candidate
     const candidate = await prisma.candidate.findUnique({
-      where: { userId },
-      include: { cvData: true }
+      where: { userId }
     });
 
     if (!candidate) {
@@ -401,70 +401,101 @@ router.get('/cv-data', authenticateToken, authorizeRoles(['candidate']), async (
       });
     }
 
+    // Get CV data from MongoDB
+    let cvData = null;
+    if (candidate.cvDataId) {
+      cvData = await mongoService.getCvDataById(candidate.cvDataId);
+    } else {
+      cvData = await mongoService.getCvData(candidate.id);
+    }
+
     // If no CV data exists, create default structure
-    if (!candidate.cvData) {
-      const defaultCvData = await prisma.cvData.create({
-        data: {
-          candidateId: candidate.id,
-          firstName: candidate.firstName || '',
-          lastName: candidate.lastName || '',
-          email: req.user.email || '',
-          linkedinUrl: candidate.linkedinUrl || '',
-          githubUrl: candidate.githubUrl || '',
-          portfolioUrl: candidate.portfolioUrl || '',
-          workExperience: [
-            {
-              id: 1,
-              jobTitle: '',
-              company: '',
-              location: '',
-              startDate: '',
-              endDate: '',
-              current: false,
-              description: ''
-            }
-          ],
-          education: [
-            {
-              id: 1,
-              degree: '',
-              institution: '',
-              location: '',
-              graduationDate: '',
-              gpa: '',
-              description: ''
-            }
-          ],
-          projects: [
-            {
-              id: 1,
-              name: '',
-              description: '',
-              technologies: '',
-              url: ''
-            }
-          ],
-          certifications: [
-            {
-              id: 1,
-              name: '',
-              issuer: '',
-              date: '',
-              url: ''
-            }
-          ]
-        }
+    if (!cvData) {
+      const defaultCvData = {
+        selectedTemplate: 'modern',
+        firstName: candidate.firstName || '',
+        lastName: candidate.lastName || '',
+        email: req.user.email || '',
+        phone: '',
+        address: '',
+        city: '',
+        country: '',
+        linkedinUrl: candidate.linkedinUrl || '',
+        githubUrl: candidate.githubUrl || '',
+        portfolioUrl: candidate.portfolioUrl || '',
+        professionalSummary: '',
+        technicalSkills: '',
+        softSkills: '',
+        languages: '',
+        workExperience: [
+          {
+            id: 1,
+            jobTitle: '',
+            company: '',
+            location: '',
+            startDate: '',
+            endDate: '',
+            current: false,
+            description: ''
+          }
+        ],
+        education: [
+          {
+            id: 1,
+            degree: '',
+            institution: '',
+            location: '',
+            graduationDate: '',
+            gpa: '',
+            description: ''
+          }
+        ],
+        projects: [
+          {
+            id: 1,
+            name: '',
+            description: '',
+            technologies: '',
+            url: '',
+            startDate: '',
+            endDate: ''
+          }
+        ],
+        certifications: [
+          {
+            id: 1,
+            name: '',
+            issuer: '',
+            date: '',
+            url: ''
+          }
+        ],
+        isComplete: false,
+        lastGenerated: null
+      };
+
+      // Save default CV data to MongoDB
+      const result = await mongoService.saveCvData(candidate.id, defaultCvData);
+      const cvDataId = result.insertedId.toString();
+
+      // Update candidate with CV data reference
+      await prisma.candidate.update({
+        where: { id: candidate.id },
+        data: { cvDataId }
       });
 
       return res.json({
         success: true,
-        cvData: defaultCvData
+        cvData: {
+          ...defaultCvData,
+          _id: cvDataId
+        }
       });
     }
 
     res.json({
       success: true,
-      cvData: candidate.cvData
+      cvData: cvData
     });
 
   } catch (error) {
@@ -494,56 +525,40 @@ router.post('/save-cv-data', authenticateToken, authorizeRoles(['candidate']), a
       });
     }
 
-    // Upsert CV data
-    const savedCvData = await prisma.cvData.upsert({
-      where: { candidateId: candidate.id },
-      update: {
-        selectedTemplate: cvData.selectedTemplate || 'modern',
-        firstName: cvData.firstName,
-        lastName: cvData.lastName,
-        email: cvData.email,
-        phone: cvData.phone,
-        address: cvData.address,
-        city: cvData.city,
-        country: cvData.country,
-        linkedinUrl: cvData.linkedinUrl,
-        githubUrl: cvData.githubUrl,
-        portfolioUrl: cvData.portfolioUrl,
-        professionalSummary: cvData.professionalSummary,
-        technicalSkills: cvData.technicalSkills,
-        softSkills: cvData.softSkills,
-        languages: cvData.languages,
-        workExperience: cvData.workExperience || [],
-        education: cvData.education || [],
-        projects: cvData.projects || [],
-        certifications: cvData.certifications || [],
-        isComplete: cvData.isComplete || false,
-        updatedAt: new Date()
-      },
-      create: {
-        candidateId: candidate.id,
-        selectedTemplate: cvData.selectedTemplate || 'modern',
-        firstName: cvData.firstName,
-        lastName: cvData.lastName,
-        email: cvData.email,
-        phone: cvData.phone,
-        address: cvData.address,
-        city: cvData.city,
-        country: cvData.country,
-        linkedinUrl: cvData.linkedinUrl,
-        githubUrl: cvData.githubUrl,
-        portfolioUrl: cvData.portfolioUrl,
-        professionalSummary: cvData.professionalSummary,
-        technicalSkills: cvData.technicalSkills,
-        softSkills: cvData.softSkills,
-        languages: cvData.languages,
-        workExperience: cvData.workExperience || [],
-        education: cvData.education || [],
-        projects: cvData.projects || [],
-        certifications: cvData.certifications || [],
-        isComplete: cvData.isComplete || false
-      }
+    // Update CV data in MongoDB
+    const updateResult = await mongoService.updateCvData(candidate.id, {
+      selectedTemplate: cvData.selectedTemplate || 'modern',
+      firstName: cvData.firstName,
+      lastName: cvData.lastName,
+      email: cvData.email,
+      phone: cvData.phone,
+      address: cvData.address,
+      city: cvData.city,
+      country: cvData.country,
+      linkedinUrl: cvData.linkedinUrl,
+      githubUrl: cvData.githubUrl,
+      portfolioUrl: cvData.portfolioUrl,
+      professionalSummary: cvData.professionalSummary,
+      technicalSkills: cvData.technicalSkills,
+      softSkills: cvData.softSkills,
+      languages: cvData.languages,
+      workExperience: cvData.workExperience || [],
+      education: cvData.education || [],
+      projects: cvData.projects || [],
+      certifications: cvData.certifications || [],
+      isComplete: cvData.isComplete || false
     });
+
+    // Get the updated CV data
+    const savedCvData = await mongoService.getCvData(candidate.id);
+
+    // If this is a new CV data document, update the candidate with the reference
+    if (updateResult.upsertedId && !candidate.cvDataId) {
+      await prisma.candidate.update({
+        where: { id: candidate.id },
+        data: { cvDataId: updateResult.upsertedId.toString() }
+      });
+    }
 
     res.json({
       success: true,
@@ -574,18 +589,32 @@ router.get('/candidate-cv/:candidateId', authenticateToken, authorizeRoles(['emp
   try {
     const { candidateId } = req.params;
 
-    // Get candidate with CV data
+    // Get candidate basic info
     const candidate = await prisma.candidate.findUnique({
       where: { id: parseInt(candidateId) },
       include: {
-        cvData: true,
         user: {
           select: { email: true, createdAt: true }
         }
       }
     });
 
-    if (!candidate || !candidate.cvData) {
+    if (!candidate) {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'CANDIDATE_NOT_FOUND', message: 'Candidate not found' }
+      });
+    }
+
+    // Get CV data from MongoDB
+    let cvData = null;
+    if (candidate.cvDataId) {
+      cvData = await mongoService.getCvDataById(candidate.cvDataId);
+    } else {
+      cvData = await mongoService.getCvData(parseInt(candidateId));
+    }
+
+    if (!cvData) {
       return res.status(404).json({
         success: false,
         error: { code: 'CV_NOT_FOUND', message: 'Candidate CV not found' }
@@ -593,7 +622,7 @@ router.get('/candidate-cv/:candidateId', authenticateToken, authorizeRoles(['emp
     }
 
     // Generate HTML CV for employer viewing
-    const htmlContent = generateHTMLCV(candidate.cvData.selectedTemplate, candidate.cvData);
+    const htmlContent = generateHTMLCV(cvData.selectedTemplate || 'modern', cvData);
 
     res.json({
       success: true,
@@ -602,10 +631,11 @@ router.get('/candidate-cv/:candidateId', authenticateToken, authorizeRoles(['emp
         id: candidate.id,
         name: `${candidate.firstName} ${candidate.lastName}`,
         email: candidate.user.email,
-        template: candidate.cvData.selectedTemplate,
-        lastGenerated: candidate.cvData.lastGenerated,
-        isComplete: candidate.cvData.isComplete
+        template: cvData.selectedTemplate || 'modern',
+        lastGenerated: cvData.lastGenerated,
+        isComplete: cvData.isComplete
       },
+      cvData: cvData,
       format: 'html'
     });
 

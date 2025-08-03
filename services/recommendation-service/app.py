@@ -20,7 +20,7 @@ app = Flask(__name__)
 def initialize_openai_client():
     """Initialize OpenAI client with proper error handling"""
     api_key = os.getenv('OPENAI_API_KEY')
-    if not api_key or api_key == 'your_openai_api_key_here':
+    if not api_key or api_key == 'sk-proj-':
         logger.warning("OpenAI API key not configured. Some features will be limited.")
         return None
 

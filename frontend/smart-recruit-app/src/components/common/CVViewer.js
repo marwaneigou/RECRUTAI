@@ -10,7 +10,8 @@ import {
   CodeBracketIcon,
   TrophyIcon,
   LanguageIcon,
-  HeartIcon
+  HeartIcon,
+  DocumentTextIcon
 } from '@heroicons/react/24/outline';
 
 const CVViewer = ({ cvSnapshot, className = "" }) => {
@@ -21,6 +22,9 @@ const CVViewer = ({ cvSnapshot, className = "" }) => {
       </div>
     );
   }
+
+  // Handle both old format (cvSnapshot) and new MongoDB format (cvData)
+  const cvData = cvSnapshot.cvData || cvSnapshot;
 
   const formatDate = (dateStr) => {
     if (!dateStr) return 'Present';
@@ -44,10 +48,10 @@ const CVViewer = ({ cvSnapshot, className = "" }) => {
           </div>
           <div>
             <h2 className="text-2xl font-bold">
-              {cvSnapshot.first_name} {cvSnapshot.last_name}
+              {cvData.firstName || cvData.first_name} {cvData.lastName || cvData.last_name}
             </h2>
             <p className="text-blue-100 mt-1">
-              {cvSnapshot.professional_summary || 'Professional Summary Not Available'}
+              {cvData.professionalSummary || cvData.professional_summary || 'Professional Summary Not Available'}
             </p>
           </div>
         </div>
@@ -62,22 +66,22 @@ const CVViewer = ({ cvSnapshot, className = "" }) => {
               Contact Information
             </h3>
             <div className="space-y-1 text-sm text-gray-600">
-              {cvSnapshot.email && (
+              {cvData.email && (
                 <div className="flex items-center">
                   <EnvelopeIcon className="h-4 w-4 mr-2 text-gray-400" />
-                  {cvSnapshot.email}
+                  {cvData.email}
                 </div>
               )}
-              {cvSnapshot.phone && (
+              {cvData.phone && (
                 <div className="flex items-center">
                   <PhoneIcon className="h-4 w-4 mr-2 text-gray-400" />
-                  {cvSnapshot.phone}
+                  {cvData.phone}
                 </div>
               )}
-              {(cvSnapshot.address || cvSnapshot.city) && (
+              {(cvData.address || cvData.city) && (
                 <div className="flex items-center">
                   <MapPinIcon className="h-4 w-4 mr-2 text-gray-400" />
-                  {cvSnapshot.address || cvSnapshot.city}
+                  {cvData.address || cvData.city}
                 </div>
               )}
             </div>
@@ -89,28 +93,28 @@ const CVViewer = ({ cvSnapshot, className = "" }) => {
               Online Presence
             </h3>
             <div className="space-y-1 text-sm text-gray-600">
-              {cvSnapshot.linkedin_url && (
+              {(cvData.linkedinUrl || cvData.linkedin_url) && (
                 <div className="flex items-center">
                   <LinkIcon className="h-4 w-4 mr-2 text-gray-400" />
-                  <a href={`https://${cvSnapshot.linkedin_url}`} target="_blank" rel="noopener noreferrer" 
+                  <a href={`https://${cvData.linkedinUrl || cvData.linkedin_url}`} target="_blank" rel="noopener noreferrer"
                      className="text-blue-600 hover:underline">
                     LinkedIn Profile
                   </a>
                 </div>
               )}
-              {cvSnapshot.github_url && (
+              {(cvData.githubUrl || cvData.github_url) && (
                 <div className="flex items-center">
                   <LinkIcon className="h-4 w-4 mr-2 text-gray-400" />
-                  <a href={`https://${cvSnapshot.github_url}`} target="_blank" rel="noopener noreferrer"
+                  <a href={`https://${cvData.githubUrl || cvData.github_url}`} target="_blank" rel="noopener noreferrer"
                      className="text-blue-600 hover:underline">
                     GitHub Profile
                   </a>
                 </div>
               )}
-              {cvSnapshot.portfolio_url && (
+              {(cvData.portfolioUrl || cvData.portfolio_url) && (
                 <div className="flex items-center">
                   <LinkIcon className="h-4 w-4 mr-2 text-gray-400" />
-                  <a href={`https://${cvSnapshot.portfolio_url}`} target="_blank" rel="noopener noreferrer"
+                  <a href={`https://${cvData.portfolioUrl || cvData.portfolio_url}`} target="_blank" rel="noopener noreferrer"
                      className="text-blue-600 hover:underline">
                     Portfolio
                   </a>
@@ -121,18 +125,18 @@ const CVViewer = ({ cvSnapshot, className = "" }) => {
         </div>
 
         {/* Work Experience */}
-        {cvSnapshot.work_experience && cvSnapshot.work_experience.length > 0 && (
+        {(cvData.workExperience || cvData.work_experience) && (cvData.workExperience || cvData.work_experience).length > 0 && (
           <div>
             <h3 className="text-lg font-semibold text-gray-900 flex items-center mb-4">
               <BriefcaseIcon className="h-5 w-5 mr-2 text-blue-600" />
               Work Experience
             </h3>
             <div className="space-y-4">
-              {cvSnapshot.work_experience.map((job, index) => (
+              {(cvData.workExperience || cvData.work_experience).map((job, index) => (
                 <div key={index} className="border-l-2 border-blue-200 pl-4 pb-4">
                   <div className="flex justify-between items-start mb-2">
                     <div>
-                      <h4 className="font-semibold text-gray-900">{job.title}</h4>
+                      <h4 className="font-semibold text-gray-900">{job.jobTitle || job.title}</h4>
                       <p className="text-blue-600 font-medium">{job.company}</p>
                       {job.location && <p className="text-sm text-gray-500">{job.location}</p>}
                     </div>
@@ -150,14 +154,14 @@ const CVViewer = ({ cvSnapshot, className = "" }) => {
         )}
 
         {/* Education */}
-        {cvSnapshot.education && cvSnapshot.education.length > 0 && (
+        {cvData.education && cvData.education.length > 0 && (
           <div>
             <h3 className="text-lg font-semibold text-gray-900 flex items-center mb-4">
               <AcademicCapIcon className="h-5 w-5 mr-2 text-blue-600" />
               Education
             </h3>
             <div className="space-y-4">
-              {cvSnapshot.education.map((edu, index) => (
+              {cvData.education.map((edu, index) => (
                 <div key={index} className="border-l-2 border-green-200 pl-4 pb-4">
                   <div className="flex justify-between items-start mb-2">
                     <div>
@@ -167,7 +171,7 @@ const CVViewer = ({ cvSnapshot, className = "" }) => {
                       {edu.gpa && <p className="text-sm text-gray-600">GPA: {edu.gpa}</p>}
                     </div>
                     <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                      {formatDateRange(edu.startDate, edu.endDate)}
+                      {formatDate(edu.graduationDate)}
                     </span>
                   </div>
                 </div>
@@ -178,14 +182,14 @@ const CVViewer = ({ cvSnapshot, className = "" }) => {
 
         {/* Skills */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {cvSnapshot.technical_skills && (
+          {(cvData.technicalSkills || cvData.technical_skills) && (
             <div>
               <h3 className="text-lg font-semibold text-gray-900 flex items-center mb-3">
                 <CodeBracketIcon className="h-5 w-5 mr-2 text-blue-600" />
                 Technical Skills
               </h3>
               <div className="flex flex-wrap gap-2">
-                {cvSnapshot.technical_skills.split(',').map((skill, index) => (
+                {(cvData.technicalSkills || cvData.technical_skills).split(',').map((skill, index) => (
                   <span key={index} className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
                     {skill.trim()}
                   </span>
@@ -194,14 +198,14 @@ const CVViewer = ({ cvSnapshot, className = "" }) => {
             </div>
           )}
 
-          {cvSnapshot.soft_skills && (
+          {(cvData.softSkills || cvData.soft_skills) && (
             <div>
               <h3 className="text-lg font-semibold text-gray-900 flex items-center mb-3">
                 <HeartIcon className="h-5 w-5 mr-2 text-blue-600" />
                 Soft Skills
               </h3>
               <div className="flex flex-wrap gap-2">
-                {cvSnapshot.soft_skills.split(',').map((skill, index) => (
+                {(cvData.softSkills || cvData.soft_skills).split(',').map((skill, index) => (
                   <span key={index} className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">
                     {skill.trim()}
                   </span>
@@ -212,14 +216,14 @@ const CVViewer = ({ cvSnapshot, className = "" }) => {
         </div>
 
         {/* Projects */}
-        {cvSnapshot.projects && cvSnapshot.projects.length > 0 && (
+        {cvData.projects && cvData.projects.length > 0 && (
           <div>
             <h3 className="text-lg font-semibold text-gray-900 flex items-center mb-4">
               <CodeBracketIcon className="h-5 w-5 mr-2 text-blue-600" />
               Projects
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {cvSnapshot.projects.map((project, index) => (
+              {cvData.projects.map((project, index) => (
                 <div key={index} className="border border-gray-200 rounded-lg p-4">
                   <div className="flex justify-between items-start mb-2">
                     <h4 className="font-semibold text-gray-900">{project.name}</h4>
@@ -248,14 +252,14 @@ const CVViewer = ({ cvSnapshot, className = "" }) => {
         )}
 
         {/* Certifications */}
-        {cvSnapshot.certifications && cvSnapshot.certifications.length > 0 && (
+        {cvData.certifications && cvData.certifications.length > 0 && (
           <div>
             <h3 className="text-lg font-semibold text-gray-900 flex items-center mb-4">
               <TrophyIcon className="h-5 w-5 mr-2 text-blue-600" />
               Certifications
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {cvSnapshot.certifications.map((cert, index) => (
+              {cvData.certifications.map((cert, index) => (
                 <div key={index} className="border border-gray-200 rounded-lg p-4">
                   <div className="flex justify-between items-start mb-2">
                     <div>
@@ -281,20 +285,38 @@ const CVViewer = ({ cvSnapshot, className = "" }) => {
         )}
 
         {/* Languages */}
-        {cvSnapshot.languages && (
+        {cvData.languages && (
           <div>
             <h3 className="text-lg font-semibold text-gray-900 flex items-center mb-3">
               <LanguageIcon className="h-5 w-5 mr-2 text-blue-600" />
               Languages
             </h3>
-            <p className="text-gray-600">{cvSnapshot.languages}</p>
+            <p className="text-gray-600">{cvData.languages}</p>
+          </div>
+        )}
+
+        {/* Cover Letter Section */}
+        {cvSnapshot.coverLetterContent && (
+          <div className="border-t pt-6">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center mb-3">
+              <DocumentTextIcon className="h-5 w-5 mr-2 text-blue-600" />
+              Cover Letter
+            </h3>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <p className="text-gray-700 whitespace-pre-wrap">{cvSnapshot.coverLetterContent}</p>
+              {cvSnapshot.coverLetterType && (
+                <p className="text-xs text-gray-500 mt-2">
+                  Type: {cvSnapshot.coverLetterType}
+                </p>
+              )}
+            </div>
           </div>
         )}
 
         {/* Template Info */}
         <div className="border-t pt-4">
           <p className="text-xs text-gray-500 text-center">
-            CV Template: {cvSnapshot.selected_template || 'Default'} • 
+            CV Template: {cvData.selectedTemplate || cvData.selected_template || 'Default'} •
             Generated for job application
           </p>
         </div>
