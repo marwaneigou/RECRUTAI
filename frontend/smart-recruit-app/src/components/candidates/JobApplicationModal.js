@@ -64,39 +64,41 @@ const JobApplicationModal = ({ job, isOpen, onClose, onApplicationSubmitted }) =
     try {
       setMatchLoading(true)
 
-      // Convert CV data to text format for analysis
-      const personalInfo = cvData.personalInfo || {}
+      // Convert CV data to text format for analysis using the correct structure
       const cvText = `
-        Name: ${personalInfo.firstName} ${personalInfo.lastName}
-        Email: ${personalInfo.email}
-        Phone: ${personalInfo.phone}
-        Location: ${personalInfo.address}
+        Name: ${cvData.firstName || ''} ${cvData.lastName || ''}
+        Email: ${cvData.email || ''}
+        Phone: ${cvData.phone || ''}
+        Location: ${cvData.city || ''}, ${cvData.country || ''}
+        Address: ${cvData.address || ''}
 
         Professional Summary: ${cvData.professionalSummary || ''}
 
-        Technical Skills: ${cvData.skills?.filter(s => ['Programming', 'Frontend', 'Backend'].includes(s.category))
-          .map(s => s.name).join(', ') || ''}
+        Technical Skills: ${cvData.technicalSkills || ''}
 
-        Soft Skills: ${cvData.skills?.filter(s => s.category === 'Soft')
-          .map(s => s.name).join(', ') || ''}
+        Soft Skills: ${cvData.softSkills || ''}
 
         Languages: ${cvData.languages || ''}
 
-        Experience: ${cvData.experience?.map(exp =>
-          `${exp.title} at ${exp.company} (${exp.startDate} - ${exp.current ? 'Present' : exp.endDate}): ${exp.description}`
-        ).join('\n') || ''}
+        Work Experience: ${cvData.workExperience?.map(exp =>
+          `${exp.jobTitle || ''} at ${exp.company || ''} (${exp.startDate || ''} - ${exp.current ? 'Present' : exp.endDate || ''}): ${exp.description || ''}`
+        ).join('\n') || 'No work experience listed'}
 
         Education: ${cvData.education?.map(edu =>
-          `${edu.degree} from ${edu.institution} (${edu.endDate})`
-        ).join('\n') || ''}
+          `${edu.degree || ''} from ${edu.institution || ''} (${edu.graduationDate || ''}): ${edu.description || ''}`
+        ).join('\n') || 'No education listed'}
 
         Projects: ${cvData.projects?.map(proj =>
-          `${proj.name}: ${proj.description} (${proj.technologies})`
-        ).join('\n') || ''}
+          `${proj.name || ''}: ${proj.description || ''} (Technologies: ${proj.technologies || ''})`
+        ).join('\n') || 'No projects listed'}
 
         Certifications: ${cvData.certifications?.map(cert =>
-          `${cert.name} from ${cert.issuer} (${cert.date})`
-        ).join('\n') || ''}
+          `${cert.name || ''} from ${cert.issuer || ''} (${cert.date || ''})`
+        ).join('\n') || 'No certifications listed'}
+
+        LinkedIn: ${cvData.linkedinUrl || ''}
+        GitHub: ${cvData.githubUrl || ''}
+        Portfolio: ${cvData.portfolioUrl || ''}
       `.trim()
 
       // Call the analysis service
@@ -239,29 +241,26 @@ const JobApplicationModal = ({ job, isOpen, onClose, onApplicationSubmitted }) =
     try {
       setLoading(true)
 
-      // Create CV snapshot for this application
-      const personalInfo = cvData.personalInfo || {}
+      // Create CV snapshot for this application using the correct structure
       const cvSnapshot = {
-        first_name: personalInfo.firstName || '',
-        last_name: personalInfo.lastName || '',
-        email: personalInfo.email || '',
-        phone: personalInfo.phone || '',
-        address: personalInfo.address || '',
-        city: personalInfo.city || '',
-        country: personalInfo.country || '',
-        linkedin_url: personalInfo.linkedin || '',
-        github_url: personalInfo.github || '',
-        portfolio_url: personalInfo.website || '',
+        first_name: cvData.firstName || '',
+        last_name: cvData.lastName || '',
+        email: cvData.email || '',
+        phone: cvData.phone || '',
+        address: cvData.address || '',
+        city: cvData.city || '',
+        country: cvData.country || '',
+        linkedin_url: cvData.linkedinUrl || '',
+        github_url: cvData.githubUrl || '',
+        portfolio_url: cvData.portfolioUrl || '',
         professional_summary: cvData.professionalSummary || '',
-        technical_skills: cvData.skills?.filter(s => ['Programming', 'Frontend', 'Backend'].includes(s.category))
-          .map(s => s.name).join(', ') || '',
-        soft_skills: cvData.skills?.filter(s => s.category === 'Soft')
-          .map(s => s.name).join(', ') || '',
+        technical_skills: cvData.technicalSkills || '',
+        soft_skills: cvData.softSkills || '',
         languages: cvData.languages || '',
-        work_experience: cvData.experience || [],
+        work_experience: cvData.workExperience || [],
         education: cvData.education || [],
-        projects: cvData.projects || [],
-        certifications: cvData.certifications || [],
+        projects: (cvData.projects || []).filter(project => project.name && project.name.trim() !== ''),
+        certifications: (cvData.certifications || []).filter(cert => cert.name && cert.name.trim() !== ''),
         selected_template: cvData.selectedTemplate || 'modern'
       }
 

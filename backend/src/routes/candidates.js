@@ -1,9 +1,9 @@
 const express = require('express')
 const axios = require('axios')
-const { PrismaClient } = require('@prisma/client')
-const router = express.Router()
+const { authenticateToken, authorizeRoles } = require('../middleware/auth')
+const { prisma, mongoService } = require('../config/database')
 
-const prisma = new PrismaClient()
+const router = express.Router()
 
 // CV Improvements endpoint
 router.post('/cv-improvements', async (req, res) => {
@@ -98,50 +98,102 @@ router.post('/cv-improvements', async (req, res) => {
 })
 
 // Get candidate dashboard data
-router.get('/dashboard', (req, res) => {
+router.get('/dashboard', authenticateToken, authorizeRoles(['candidate']), async (req, res) => {
   try {
-    // Mock dashboard data - replace with actual database queries
-    const dashboardData = {
-      stats: {
-        totalApplications: 12,
-        pendingApplications: 5,
-        interviews: 2,
-        offers: 1
+    const userId = req.user.id
+
+    // Get candidate profile
+    const candidate = await prisma.candidate.findUnique({
+      where: { userId },
+      include: {
+        user: {
+          select: { name: true, email: true }
+        }
+      }
+    })
+
+    if (!candidate) {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'CANDIDATE_NOT_FOUND', message: 'Candidate profile not found' }
+      })
+    }
+
+    // Get real application statistics
+    const applications = await prisma.application.findMany({
+      where: { candidateId: candidate.id },
+      include: {
+        job: {
+          include: {
+            employer: {
+              select: { companyName: true }
+            }
+          }
+        }
       },
-      recentApplications: [
-        {
-          id: 1,
-          jobTitle: "Frontend Developer",
-          company: "Tech Corp",
-          appliedDate: "2024-01-15",
-          status: "pending"
-        },
-        {
-          id: 2,
-          jobTitle: "React Developer",
-          company: "StartupXYZ",
-          appliedDate: "2024-01-12",
-          status: "interview"
+      orderBy: { appliedAt: 'desc' }
+    })
+
+    // Calculate stats
+    const stats = {
+      totalApplications: applications.length,
+      pendingApplications: applications.filter(app => app.status === 'pending').length,
+      interviews: applications.filter(app => ['interviewed', 'shortlisted'].includes(app.status)).length,
+      offers: applications.filter(app => app.status === 'offered').length
+    }
+
+    // Get recent applications (last 5)
+    const recentApplications = applications.slice(0, 5).map(app => ({
+      id: app.id,
+      jobTitle: app.job.title,
+      company: app.job.employer.companyName,
+      appliedDate: app.appliedAt.toISOString().split('T')[0],
+      status: app.status,
+      location: app.job.location,
+      matchScore: app.matchScore
+    }))
+
+    // Get recommended jobs (active jobs that candidate hasn't applied to)
+    const appliedJobIds = applications.map(app => app.jobId)
+    const recommendedJobs = await prisma.job.findMany({
+      where: {
+        isActive: true,
+        id: { notIn: appliedJobIds }
+      },
+      include: {
+        employer: {
+          select: { companyName: true }
         }
-      ],
-      recommendedJobs: [
-        {
-          id: 1,
-          title: "Senior Frontend Developer",
-          company: "Innovation Labs",
-          location: "Remote",
-          salary: "$80,000 - $100,000",
-          postedDate: "2024-01-16"
-        },
-        {
-          id: 2,
-          title: "Full Stack Developer",
-          company: "Digital Solutions",
-          location: "New York, NY",
-          salary: "$75,000 - $95,000",
-          postedDate: "2024-01-15"
-        }
-      ]
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 5
+    })
+
+    const formattedRecommendedJobs = recommendedJobs.map(job => ({
+      id: job.id,
+      title: job.title,
+      company: job.employer.companyName,
+      location: job.location || 'Not specified',
+      salary: job.salaryMin && job.salaryMax
+        ? `€${job.salaryMin.toLocaleString()} - €${job.salaryMax.toLocaleString()}`
+        : 'Salary not specified',
+      postedDate: job.createdAt.toISOString().split('T')[0],
+      employmentType: job.employmentType,
+      experienceLevel: job.experienceLevel
+    }))
+
+    const dashboardData = {
+      stats,
+      recentApplications,
+      recommendedJobs: formattedRecommendedJobs,
+      candidateInfo: {
+        name: candidate.user.name,
+        firstName: candidate.firstName,
+        lastName: candidate.lastName,
+        email: candidate.user.email,
+        location: candidate.location,
+        experienceYears: candidate.experienceYears
+      }
     }
 
     res.json({
@@ -153,55 +205,71 @@ router.get('/dashboard', (req, res) => {
     console.error('Dashboard data error:', error)
     res.status(500).json({
       success: false,
-      error: 'Failed to fetch dashboard data'
+      error: { code: 'DASHBOARD_FETCH_FAILED', message: 'Failed to fetch dashboard data' }
     })
   }
 })
 
 // Get candidate applications
-router.get('/applications', (req, res) => {
+router.get('/applications', authenticateToken, authorizeRoles(['candidate']), async (req, res) => {
   try {
-    // Mock applications data - replace with actual database query
-    const applications = [
-      {
-        id: 1,
-        jobTitle: "Frontend Developer",
-        company: "Tech Corp",
-        location: "San Francisco, CA",
-        appliedDate: "2024-01-15",
-        status: "pending",
-        salary: "$70,000 - $90,000"
+    const userId = req.user.id
+
+    // Get candidate profile
+    const candidate = await prisma.candidate.findUnique({
+      where: { userId }
+    })
+
+    if (!candidate) {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'CANDIDATE_NOT_FOUND', message: 'Candidate profile not found' }
+      })
+    }
+
+    // Get all applications for this candidate
+    const applications = await prisma.application.findMany({
+      where: { candidateId: candidate.id },
+      include: {
+        job: {
+          include: {
+            employer: {
+              select: { companyName: true, logoUrl: true }
+            }
+          }
+        }
       },
-      {
-        id: 2,
-        jobTitle: "React Developer",
-        company: "StartupXYZ",
-        location: "Remote",
-        appliedDate: "2024-01-12",
-        status: "interview",
-        salary: "$65,000 - $85,000"
-      },
-      {
-        id: 3,
-        jobTitle: "Full Stack Developer",
-        company: "Innovation Labs",
-        location: "New York, NY",
-        appliedDate: "2024-01-10",
-        status: "rejected",
-        salary: "$80,000 - $100,000"
-      }
-    ]
+      orderBy: { appliedAt: 'desc' }
+    })
+
+    const formattedApplications = applications.map(app => ({
+      id: app.id,
+      jobTitle: app.job.title,
+      company: app.job.employer.companyName,
+      appliedDate: app.appliedAt.toISOString().split('T')[0],
+      status: app.status,
+      location: app.job.location || 'Not specified',
+      salary: app.job.salaryMin && app.job.salaryMax
+        ? `€${app.job.salaryMin.toLocaleString()} - €${app.job.salaryMax.toLocaleString()}`
+        : 'Salary not specified',
+      employmentType: app.job.employmentType,
+      experienceLevel: app.job.experienceLevel,
+      matchScore: app.matchScore,
+      coverLetterId: app.coverLetterId,
+      notes: app.notes,
+      rating: app.rating
+    }))
 
     res.json({
       success: true,
-      applications: applications
+      applications: formattedApplications
     })
 
   } catch (error) {
     console.error('Applications fetch error:', error)
     res.status(500).json({
       success: false,
-      error: 'Failed to fetch applications'
+      error: { code: 'APPLICATIONS_FETCH_FAILED', message: 'Failed to fetch applications' }
     })
   }
 })
@@ -238,104 +306,179 @@ router.post('/apply', (req, res) => {
 })
 
 // Get CV data for candidate
-router.get('/cv-data', async (req, res) => {
+router.get('/cv-data', authenticateToken, authorizeRoles(['candidate']), async (req, res) => {
   try {
-    // For now, return mock CV data since we don't have authentication middleware
-    // In production, you would get the user ID from the authenticated token
+    const userId = req.user.id
 
-    const mockCvData = {
-      personalInfo: {
-        firstName: 'John',
-        lastName: 'Doe',
-        email: 'john.doe@example.com',
-        phone: '+1234567890',
-        address: 'New York, NY',
-        linkedin: 'linkedin.com/in/johndoe',
-        github: 'github.com/johndoe',
-        website: 'johndoe.dev'
-      },
-      professionalSummary: 'Experienced software engineer with 5+ years in full-stack development.',
-      experience: [
-        {
-          id: 1,
-          title: 'Senior Software Engineer',
-          company: 'Tech Corp',
-          location: 'New York, NY',
-          startDate: '2021-01',
-          endDate: '',
-          current: true,
-          description: 'Lead development of web applications using React and Node.js'
+    // Get candidate
+    const candidate = await prisma.candidate.findUnique({
+      where: { userId }
+    })
+
+    if (!candidate) {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'CANDIDATE_NOT_FOUND', message: 'Candidate profile not found' }
+      })
+    }
+
+    // Get CV data from MongoDB
+    let cvData = null
+    if (candidate.cvDataId) {
+      cvData = await mongoService.getCvDataById(candidate.cvDataId)
+    } else {
+      cvData = await mongoService.getCvData(candidate.id)
+    }
+
+    // If no CV data exists, create default structure
+    if (!cvData) {
+      const defaultCvData = {
+        selectedTemplate: 'modern',
+        firstName: candidate.firstName || '',
+        lastName: candidate.lastName || '',
+        email: req.user.email || '',
+        phone: '',
+        address: '',
+        city: candidate.location ? candidate.location.split(',')[0]?.trim() : '',
+        country: candidate.location ? candidate.location.split(',')[1]?.trim() : '',
+        linkedinUrl: candidate.linkedinUrl || '',
+        githubUrl: candidate.githubUrl || '',
+        portfolioUrl: candidate.portfolioUrl || '',
+        professionalSummary: '',
+        technicalSkills: '',
+        softSkills: '',
+        languages: '',
+        workExperience: [
+          {
+            id: 1,
+            jobTitle: '',
+            company: '',
+            location: '',
+            startDate: '',
+            endDate: '',
+            current: false,
+            description: ''
+          }
+        ],
+        education: [
+          {
+            id: 1,
+            degree: '',
+            institution: '',
+            location: '',
+            graduationDate: '',
+            gpa: '',
+            description: ''
+          }
+        ],
+        projects: [
+          {
+            id: 1,
+            name: '',
+            description: '',
+            technologies: '',
+            url: '',
+            startDate: '',
+            endDate: ''
+          }
+        ],
+        certifications: [
+          {
+            id: 1,
+            name: '',
+            issuer: '',
+            date: '',
+            url: ''
+          }
+        ],
+        isComplete: false,
+        lastGenerated: null
+      }
+
+      // Save default CV data to MongoDB
+      const result = await mongoService.saveCvData(candidate.id, defaultCvData)
+      const cvDataId = result.insertedId.toString()
+
+      // Update candidate with CV data reference
+      await prisma.candidate.update({
+        where: { id: candidate.id },
+        data: { cvDataId }
+      })
+
+      return res.json({
+        success: true,
+        cvData: {
+          ...defaultCvData,
+          _id: cvDataId
         }
-      ],
-      education: [
-        {
-          id: 1,
-          degree: 'Bachelor of Science in Computer Science',
-          institution: 'University of Technology',
-          location: 'New York, NY',
-          startDate: '2015-09',
-          endDate: '2019-05',
-          gpa: '3.8'
-        }
-      ],
-      skills: [
-        { id: 1, name: 'JavaScript', category: 'Programming' },
-        { id: 2, name: 'React', category: 'Frontend' },
-        { id: 3, name: 'Node.js', category: 'Backend' },
-        { id: 4, name: 'Python', category: 'Programming' },
-        { id: 5, name: 'SQL', category: 'Backend' },
-        { id: 6, name: 'Leadership', category: 'Soft' },
-        { id: 7, name: 'Communication', category: 'Soft' },
-        { id: 8, name: 'Problem-solving', category: 'Soft' }
-      ],
-      languages: 'English (Fluent), French (Native), Spanish (Intermediate)',
-      projects: [
-        {
-          id: 1,
-          name: 'E-commerce Platform',
-          description: 'Built a full-stack e-commerce platform',
-          technologies: 'React, Node.js, MongoDB',
-          url: 'github.com/johndoe/ecommerce',
-          startDate: '2023-01',
-          endDate: '2023-06'
-        }
-      ],
-      certifications: [
-        {
-          id: 1,
-          name: 'AWS Certified Developer',
-          issuer: 'Amazon Web Services',
-          date: '2023-03',
-          url: 'aws.amazon.com/certification'
-        }
-      ],
-      selectedTemplate: 'modern',
-      isComplete: true
+      })
     }
 
     res.json({
       success: true,
-      cvData: mockCvData
+      cvData: cvData
     })
 
   } catch (error) {
     console.error('Error fetching CV data:', error)
     res.status(500).json({
       success: false,
-      error: 'Failed to fetch CV data'
+      error: { code: 'CV_FETCH_FAILED', message: 'Failed to fetch CV data' }
     })
   }
 })
 
 // Save CV data for candidate
-router.post('/save-cv-data', async (req, res) => {
+router.post('/save-cv-data', authenticateToken, authorizeRoles(['candidate']), async (req, res) => {
   try {
+    const userId = req.user.id
     const cvData = req.body
 
-    // For now, just return success since we don't have database setup
-    // In production, you would save to database using the authenticated user ID
+    // Get candidate
+    const candidate = await prisma.candidate.findUnique({
+      where: { userId }
+    })
 
-    console.log('Saving CV data:', cvData)
+    if (!candidate) {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'CANDIDATE_NOT_FOUND', message: 'Candidate profile not found' }
+      })
+    }
+
+    // Update CV data in MongoDB
+    const updateResult = await mongoService.updateCvData(candidate.id, {
+      selectedTemplate: cvData.selectedTemplate || 'modern',
+      firstName: cvData.firstName,
+      lastName: cvData.lastName,
+      email: cvData.email,
+      phone: cvData.phone,
+      address: cvData.address,
+      city: cvData.city,
+      country: cvData.country,
+      linkedinUrl: cvData.linkedinUrl,
+      githubUrl: cvData.githubUrl,
+      portfolioUrl: cvData.portfolioUrl,
+      professionalSummary: cvData.professionalSummary,
+      technicalSkills: cvData.technicalSkills,
+      softSkills: cvData.softSkills,
+      languages: cvData.languages,
+      workExperience: cvData.workExperience || [],
+      education: cvData.education || [],
+      projects: cvData.projects || [],
+      certifications: cvData.certifications || [],
+      isComplete: cvData.isComplete || false
+    })
+
+    // If this is the first time saving CV data, update the candidate record
+    if (!candidate.cvDataId && updateResult.upsertedId) {
+      await prisma.candidate.update({
+        where: { id: candidate.id },
+        data: { cvDataId: updateResult.upsertedId.toString() }
+      })
+    }
+
+    console.log('CV data saved for candidate:', candidate.id)
 
     res.json({
       success: true,
@@ -347,7 +490,7 @@ router.post('/save-cv-data', async (req, res) => {
     console.error('Error saving CV data:', error)
     res.status(500).json({
       success: false,
-      error: 'Failed to save CV data'
+      error: { code: 'CV_SAVE_FAILED', message: 'Failed to save CV data' }
     })
   }
 })
@@ -358,7 +501,7 @@ function generateModernTemplate(data) {
     <!DOCTYPE html>
     <html>
     <head>
-      <title>CV - ${data.firstName} ${data.lastName}</title>
+      <title>CV</title>
       <style>
         body {
           font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -479,7 +622,7 @@ function generateClassicTemplate(data) {
     <!DOCTYPE html>
     <html>
     <head>
-      <title>CV - ${data.firstName} ${data.lastName}</title>
+      <title>CV</title>
       <style>
         body {
           font-family: 'Times New Roman', serif;
@@ -593,7 +736,7 @@ function generateCreativeTemplate(data) {
     <!DOCTYPE html>
     <html>
     <head>
-      <title>CV - ${data.firstName} ${data.lastName}</title>
+      <title>CV</title>
       <style>
         body {
           font-family: 'Arial', sans-serif;

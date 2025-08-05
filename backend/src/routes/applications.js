@@ -1,11 +1,9 @@
 const express = require('express')
-const { PrismaClient } = require('@prisma/client')
 const { body, validationResult } = require('express-validator')
 const { authenticateToken, authorizeRoles } = require('../middleware/auth')
-const { mongoService } = require('../config/database')
+const { prisma, mongoService } = require('../config/database')
 
 const router = express.Router()
-const prisma = new PrismaClient()
 
 // Get all applications (for employers) or user's applications (for candidates)
 router.get('/', authenticateToken, async (req, res) => {
@@ -445,18 +443,63 @@ router.post('/submit', authenticateToken, [
       }
     }
 
-    // Save CV snapshot to MongoDB if provided
+    // Save CV snapshot to MongoDB - get from current CV data if not provided
     let cvSnapshotId = null
-    if (cvSnapshot && Object.keys(cvSnapshot).length > 0) {
+    let finalCvSnapshot = cvSnapshot
+
+    // If no CV snapshot provided or it's incomplete, get current CV data
+    if (!cvSnapshot || Object.keys(cvSnapshot).length === 0 || !cvSnapshot.first_name) {
+      try {
+        // Get current CV data from MongoDB
+        let currentCvData = null
+        if (candidate.cvDataId) {
+          currentCvData = await mongoService.getCvDataById(candidate.cvDataId)
+        } else {
+          currentCvData = await mongoService.getCvData(candidate.id)
+        }
+
+        if (currentCvData) {
+          // Create complete CV snapshot from current CV data
+          finalCvSnapshot = {
+            first_name: currentCvData.firstName || '',
+            last_name: currentCvData.lastName || '',
+            email: currentCvData.email || '',
+            phone: currentCvData.phone || '',
+            address: currentCvData.address || '',
+            city: currentCvData.city || '',
+            country: currentCvData.country || '',
+            linkedin_url: currentCvData.linkedinUrl || '',
+            github_url: currentCvData.githubUrl || '',
+            portfolio_url: currentCvData.portfolioUrl || '',
+            professional_summary: currentCvData.professionalSummary || '',
+            technical_skills: currentCvData.technicalSkills || '',
+            soft_skills: currentCvData.softSkills || '',
+            languages: currentCvData.languages || '',
+            work_experience: currentCvData.workExperience || [],
+            education: currentCvData.education || [],
+            projects: (currentCvData.projects || []).filter(project => project.name && project.name.trim() !== ''),
+            certifications: (currentCvData.certifications || []).filter(cert => cert.name && cert.name.trim() !== ''),
+            selected_template: currentCvData.selectedTemplate || 'modern'
+          }
+          console.log('📄 Created complete CV snapshot from current CV data')
+        }
+      } catch (error) {
+        console.error('Error fetching current CV data for snapshot:', error)
+      }
+    }
+
+    // Save the CV snapshot to MongoDB
+    if (finalCvSnapshot && Object.keys(finalCvSnapshot).length > 0) {
       try {
         const cvSnapshotDoc = await mongoService.saveCvSnapshot(
           application.id,
           candidate.id,
           parseInt(jobId),
-          cvSnapshot,
+          finalCvSnapshot,
           {} // customizations can be added later
         )
         cvSnapshotId = cvSnapshotDoc.insertedId.toString()
+        console.log('✅ CV snapshot saved to MongoDB with ID:', cvSnapshotId)
       } catch (mongoError) {
         console.error('Error saving CV snapshot to MongoDB:', mongoError)
         // Continue without CV snapshot if MongoDB fails
@@ -468,32 +511,32 @@ router.post('/submit', authenticateToken, [
     let matchAnalysis = frontendMatchAnalysis || null
 
     // If no frontend match score provided, calculate based on CV data
-    if (!frontendMatchScore && cvSnapshot && Object.keys(cvSnapshot).length > 0) {
+    if (!frontendMatchScore && finalCvSnapshot && Object.keys(finalCvSnapshot).length > 0) {
       // Simple match score calculation based on CV data
       let score = 60 // Base score
 
       // Check technical skills
-      if (cvSnapshot.technical_skills && cvSnapshot.technical_skills.length > 0) {
+      if (finalCvSnapshot.technical_skills && finalCvSnapshot.technical_skills.length > 0) {
         score += 15
       }
 
       // Check work experience
-      if (cvSnapshot.work_experience && cvSnapshot.work_experience.length > 0) {
+      if (finalCvSnapshot.work_experience && finalCvSnapshot.work_experience.length > 0) {
         score += 15
       }
 
       // Check education
-      if (cvSnapshot.education && cvSnapshot.education.length > 0) {
+      if (finalCvSnapshot.education && finalCvSnapshot.education.length > 0) {
         score += 5
       }
 
       // Check professional summary
-      if (cvSnapshot.professional_summary && cvSnapshot.professional_summary.length > 50) {
+      if (finalCvSnapshot.professional_summary && finalCvSnapshot.professional_summary.length > 50) {
         score += 5
       }
 
       matchScore = Math.min(score, 100)
-      matchAnalysis = `Match calculated based on CV content: ${cvSnapshot.technical_skills ? 'Technical skills, ' : ''}${cvSnapshot.work_experience?.length || 0} work experiences, ${cvSnapshot.education?.length || 0} education entries`
+      matchAnalysis = `Match calculated based on CV content: ${finalCvSnapshot.technical_skills ? 'Technical skills, ' : ''}${finalCvSnapshot.work_experience?.length || 0} work experiences, ${finalCvSnapshot.education?.length || 0} education entries`
 
       // Add cover letter bonus
       if (coverLetter && coverLetter.trim().length > 50) {
@@ -717,5 +760,173 @@ router.put('/:id/status', authenticateToken, authorizeRoles(['employer']), async
     })
   }
 })
+
+// Send status update email
+router.post('/send-status-email',
+  authenticateToken,
+  authorizeRoles(['employer']),
+  [
+    body('applicationId').isInt().withMessage('Valid application ID is required'),
+    body('recipientEmail').isEmail().withMessage('Valid recipient email is required'),
+    body('recipientName').notEmpty().withMessage('Recipient name is required'),
+    body('subject').notEmpty().withMessage('Email subject is required'),
+    body('body').notEmpty().withMessage('Email body is required'),
+    body('status').isIn(['pending', 'reviewed', 'shortlisted', 'interviewed', 'offered', 'accepted', 'rejected', 'withdrawn']).withMessage('Valid status is required')
+  ],
+  async (req, res) => {
+    try {
+      // Check for validation errors
+      const errors = validationResult(req)
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Invalid input data',
+            details: errors.array()
+          }
+        })
+      }
+
+      const { applicationId, recipientEmail, recipientName, subject, body, status } = req.body
+      const { id: userId } = req.user
+
+      // Verify that the application belongs to the employer
+      const application = await prisma.application.findFirst({
+        where: {
+          id: parseInt(applicationId),
+          job: {
+            employer: {
+              userId: userId
+            }
+          }
+        },
+        include: {
+          job: {
+            include: {
+              employer: true
+            }
+          },
+          candidate: {
+            include: {
+              user: true
+            }
+          }
+        }
+      })
+
+      if (!application) {
+        return res.status(404).json({
+          success: false,
+          error: { code: 'APPLICATION_NOT_FOUND', message: 'Application not found or access denied' }
+        })
+      }
+
+      // Import email service
+      const emailService = require('../services/emailService')
+
+      // Send the email
+      const emailResult = await emailService.sendStatusUpdateEmail({
+        recipientEmail,
+        recipientName,
+        subject,
+        body,
+        companyName: application.job.employer.companyName || 'Our Company',
+        jobTitle: application.job.title
+      })
+
+      if (emailResult.success) {
+        // Log the email activity (optional - you can store this in database)
+        console.log(`Status update email sent to ${recipientEmail} for application ${applicationId}`)
+
+        res.json({
+          success: true,
+          data: {
+            message: 'Email sent successfully',
+            messageId: emailResult.messageId,
+            recipientEmail,
+            status
+          }
+        })
+      } else {
+        res.status(500).json({
+          success: false,
+          error: {
+            code: 'EMAIL_SEND_FAILED',
+            message: 'Failed to send email',
+            details: emailResult.error
+          }
+        })
+      }
+
+    } catch (error) {
+      console.error('Error sending status update email:', error)
+      res.status(500).json({
+        success: false,
+        error: { code: 'EMAIL_SERVICE_ERROR', message: 'Failed to send status update email' }
+      })
+    }
+  }
+)
+
+// Test email configuration
+router.post('/test-email',
+  authenticateToken,
+  authorizeRoles(['employer']),
+  [
+    body('recipientEmail').isEmail().withMessage('Valid recipient email is required')
+  ],
+  async (req, res) => {
+    try {
+      // Check for validation errors
+      const errors = validationResult(req)
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Invalid input data',
+            details: errors.array()
+          }
+        })
+      }
+
+      const { recipientEmail } = req.body
+
+      // Import email service
+      const emailService = require('../services/emailService')
+
+      // Send test email
+      const emailResult = await emailService.sendTestEmail(recipientEmail)
+
+      if (emailResult.success) {
+        res.json({
+          success: true,
+          data: {
+            message: 'Test email sent successfully',
+            messageId: emailResult.messageId,
+            recipientEmail
+          }
+        })
+      } else {
+        res.status(500).json({
+          success: false,
+          error: {
+            code: 'EMAIL_SEND_FAILED',
+            message: 'Failed to send test email',
+            details: emailResult.error
+          }
+        })
+      }
+
+    } catch (error) {
+      console.error('Error sending test email:', error)
+      res.status(500).json({
+        success: false,
+        error: { code: 'EMAIL_SERVICE_ERROR', message: 'Failed to send test email' }
+      })
+    }
+  }
+)
 
 module.exports = router

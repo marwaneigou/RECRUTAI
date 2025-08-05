@@ -137,11 +137,18 @@ async function connectDatabases() {
 /**
  * Disconnect from all databases
  */
+let disconnectInProgress = false
 async function disconnectDatabases() {
+  if (disconnectInProgress) {
+    logger.info('🔌 Database disconnection already in progress, skipping...')
+    return
+  }
+
+  disconnectInProgress = true
   logger.info('🔌 Disconnecting from databases...')
-  
+
   const disconnectPromises = []
-  
+
   // Disconnect Prisma
   if (prisma) {
     disconnectPromises.push(
@@ -152,7 +159,7 @@ async function disconnectDatabases() {
       })
     )
   }
-  
+
   // Disconnect MongoDB
   if (mongoClient) {
     disconnectPromises.push(
@@ -163,7 +170,7 @@ async function disconnectDatabases() {
       })
     )
   }
-  
+
   // Disconnect Redis
   if (redisClient && redisClient.isOpen) {
     disconnectPromises.push(
@@ -174,9 +181,10 @@ async function disconnectDatabases() {
       })
     )
   }
-  
+
   await Promise.all(disconnectPromises)
   logger.info('✅ All database connections closed')
+  disconnectInProgress = false
 }
 
 /**
@@ -552,19 +560,30 @@ const cache = {
   }
 }
 
-// Handle process termination
+// Handle process termination - prevent multiple disconnections
+let isDisconnecting = false
+
 process.on('beforeExit', async () => {
-  await disconnectDatabases()
+  if (!isDisconnecting) {
+    isDisconnecting = true
+    await disconnectDatabases()
+  }
 })
 
 process.on('SIGINT', async () => {
-  await disconnectDatabases()
-  process.exit(0)
+  if (!isDisconnecting) {
+    isDisconnecting = true
+    await disconnectDatabases()
+    process.exit(0)
+  }
 })
 
 process.on('SIGTERM', async () => {
-  await disconnectDatabases()
-  process.exit(0)
+  if (!isDisconnecting) {
+    isDisconnecting = true
+    await disconnectDatabases()
+    process.exit(0)
+  }
 })
 
 module.exports = {

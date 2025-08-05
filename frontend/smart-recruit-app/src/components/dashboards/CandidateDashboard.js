@@ -22,7 +22,6 @@ const CandidateDashboard = () => {
   const [stats, setStats] = useState({
     applicationsSent: 0,
     jobMatches: 0,
-    profileViews: 0,
     interviews: 0
   })
   const [loading, setLoading] = useState(true)
@@ -31,12 +30,93 @@ const CandidateDashboard = () => {
   const [showJobDetails, setShowJobDetails] = useState(false)
   const [jobRecommendations, setJobRecommendations] = useState([])
   const [recommendationsLoading, setRecommendationsLoading] = useState(true)
+  const [recentApplications, setRecentApplications] = useState([])
+  const [applicationsLoading, setApplicationsLoading] = useState(false)
   const [feedbackGiven, setFeedbackGiven] = useState(new Set())
+
+  // Helper function to get status text
+  const getStatusText = (status) => {
+    const statusMap = {
+      pending: 'Under Review',
+      reviewed: 'Reviewed',
+      shortlisted: 'Shortlisted',
+      interviewed: 'Interview Scheduled',
+      offered: 'Offer Extended',
+      accepted: 'Accepted',
+      rejected: 'Not Selected',
+      withdrawn: 'Withdrawn'
+    }
+    return statusMap[status] || 'Under Review'
+  }
+
+  // Helper function to get status color
+  const getStatusColor = (status) => {
+    const colorMap = {
+      pending: 'bg-yellow-100 text-yellow-800',
+      reviewed: 'bg-blue-100 text-blue-800',
+      shortlisted: 'bg-green-100 text-green-800',
+      interviewed: 'bg-blue-100 text-blue-800',
+      offered: 'bg-purple-100 text-purple-800',
+      accepted: 'bg-green-100 text-green-800',
+      rejected: 'bg-red-100 text-red-800',
+      withdrawn: 'bg-gray-100 text-gray-800'
+    }
+    return colorMap[status] || 'bg-yellow-100 text-yellow-800'
+  }
+
+  // Helper function to format date
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Unknown'
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    })
+  }
+
+  // Fetch recent applications from API
+  const fetchRecentApplications = async () => {
+    try {
+      setApplicationsLoading(true)
+      const response = await api.get('/applications')
+      console.log('Recent Applications API Response:', response.data)
+
+      // Handle different response structures
+      const applicationsData = response.data.data?.applications || response.data.applications || []
+
+      // Transform and limit to 3 most recent applications
+      const transformedApplications = applicationsData
+        .slice(0, 3)
+        .map(app => ({
+          id: app.id,
+          jobTitle: app.jobTitle || 'Unknown Position',
+          company: app.companyName || 'Unknown Company',
+          status: getStatusText(app.status),
+          appliedDate: formatDate(app.appliedAt || app.appliedDate),
+          statusColor: getStatusColor(app.status)
+        }))
+
+      setRecentApplications(transformedApplications)
+    } catch (error) {
+      console.error('Error fetching recent applications:', error)
+      setRecentApplications([]) // Set empty array on error
+    } finally {
+      setApplicationsLoading(false)
+    }
+  }
 
   useEffect(() => {
     fetchCandidateStats()
     fetchJobRecommendations()
+    fetchRecentApplications()
   }, [])
+
+  // Refresh applications when forceUpdate changes (e.g., after applying to a job)
+  useEffect(() => {
+    if (forceUpdate > 0) {
+      fetchRecentApplications()
+    }
+  }, [forceUpdate])
 
   const fetchCandidateStats = async () => {
     try {
@@ -71,7 +151,6 @@ const CandidateDashboard = () => {
       setStats({
         applicationsSent: 0,
         jobMatches: 0,
-        profileViews: 0,
         interviews: 0
       })
     } finally {
@@ -149,75 +228,38 @@ const CandidateDashboard = () => {
     )
   }
 
-  // Removed null check since we have default values
+  // Helper function to get stats data
+  const getStatsData = () => {
+    console.log('Rendering CandidateDashboard with stats:', stats, 'forceUpdate:', forceUpdate) // Debug log
 
-  // Dashboard content only (no view switching)
+    return [
+      {
+        name: 'Applications Sent',
+        value: stats.applicationsSent,
+        icon: DocumentTextIcon,
+        color: 'bg-blue-500',
+        change: '+2 this week'
+      },
+      {
+        name: 'Job Matches',
+        value: stats.jobMatches,
+        icon: BriefcaseIcon,
+        color: 'bg-green-500',
+        change: '+3 new matches'
+      },
+      {
+        name: 'Interviews',
+        value: stats.interviews,
+        icon: BellIcon,
+        color: 'bg-orange-500',
+        change: '1 scheduled'
+      }
+    ]
+  }
 
-  // Main dashboard view
-  console.log('Rendering CandidateDashboard with stats:', stats, 'forceUpdate:', forceUpdate) // Debug log
 
-  const statsData = [
-    {
-      name: 'Applications Sent',
-      value: stats.applicationsSent,
-      icon: DocumentTextIcon,
-      color: 'bg-blue-500',
-      change: '+2 this week'
-    },
-    {
-      name: 'Job Matches',
-      value: stats.jobMatches,
-      icon: BriefcaseIcon,
-      color: 'bg-green-500',
-      change: '+3 new matches'
-    },
-    {
-      name: 'Profile Views',
-      value: stats.profileViews,
-      icon: ChartBarIcon,
-      color: 'bg-purple-500',
-      change: '+5 this week'
-    },
-    {
-      name: 'Interviews',
-      value: stats.interviews,
-      icon: BellIcon,
-      color: 'bg-orange-500',
-      change: '1 scheduled'
-    }
-  ]
-
-  const recentApplications = [
-    {
-      id: 1,
-      jobTitle: 'Senior Full Stack Developer',
-      company: 'TechCorp Solutions',
-      status: 'Under Review',
-      appliedDate: '2024-01-15',
-      statusColor: 'bg-yellow-100 text-yellow-800'
-    },
-    {
-      id: 2,
-      jobTitle: 'Frontend React Developer',
-      company: 'Innovate Digital',
-      status: 'Interview Scheduled',
-      appliedDate: '2024-01-12',
-      statusColor: 'bg-blue-100 text-blue-800'
-    },
-    {
-      id: 3,
-      jobTitle: 'Data Scientist',
-      company: 'TechCorp Solutions',
-      status: 'Shortlisted',
-      appliedDate: '2024-01-10',
-      statusColor: 'bg-green-100 text-green-800'
-    }
-  ]
 
   const handleViewJobDetails = async (job) => {
-    setSelectedJob(job)
-    setShowJobDetails(true)
-
     // Track interaction
     try {
       await aiAPI.trackRecommendationInteraction(job.id, 'view', job.matchScore, {
@@ -228,6 +270,9 @@ const CandidateDashboard = () => {
     } catch (error) {
       console.error('Failed to track job view interaction:', error)
     }
+
+    // Navigate to job details page
+    navigate(`/candidate/jobs/${job.id}`)
   }
 
   const handleApplyToJob = async (jobId) => {
@@ -245,8 +290,8 @@ const CandidateDashboard = () => {
       console.error('Failed to track job apply interaction:', error)
     }
 
-    // Handle job application
-    toast.success('Application submitted successfully!')
+    // Navigate to job details page with apply intent
+    navigate(`/candidate/jobs/${jobId}?apply=true`)
   }
 
   const handleJobFeedback = async (job, rating, feedback = '') => {
@@ -282,7 +327,7 @@ const CandidateDashboard = () => {
         
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {statsData.map((stat) => (
+          {getStatsData().map((stat) => (
             <div key={stat.name} className="card">
               <div className="card-body">
                 <div className="flex items-center">
@@ -307,28 +352,62 @@ const CandidateDashboard = () => {
               <h3 className="text-lg font-medium text-gray-900">Recent Applications</h3>
             </div>
             <div className="card-body">
-              <div className="space-y-4">
-                {recentApplications.map((application) => (
-                  <div key={application.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                    <div>
-                      <h4 className="font-medium text-gray-900">{application.jobTitle}</h4>
-                      <p className="text-sm text-gray-600">{application.company}</p>
-                      <p className="text-xs text-gray-500">Applied on {application.appliedDate}</p>
+              {applicationsLoading ? (
+                // Loading state
+                <div className="space-y-4">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg animate-pulse">
+                      <div className="flex-1">
+                        <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                        <div className="h-3 bg-gray-200 rounded w-1/2 mb-1"></div>
+                        <div className="h-3 bg-gray-200 rounded w-1/3"></div>
+                      </div>
+                      <div className="h-6 bg-gray-200 rounded-full w-20"></div>
                     </div>
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${application.statusColor}`}>
-                      {application.status}
-                    </span>
+                  ))}
+                </div>
+              ) : recentApplications.length === 0 ? (
+                // Empty state
+                <div className="text-center py-8">
+                  <DocumentTextIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h4 className="text-lg font-medium text-gray-900 mb-2">No Applications Yet</h4>
+                  <p className="text-gray-600 mb-4">
+                    Start applying to jobs to see your recent applications here.
+                  </p>
+                  <button
+                    onClick={() => navigate('/candidate/jobs')}
+                    className="btn-primary"
+                  >
+                    Browse Jobs
+                  </button>
+                </div>
+              ) : (
+                // Applications list
+                <>
+                  <div className="space-y-4">
+                    {recentApplications.map((application) => (
+                      <div key={application.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                        <div>
+                          <h4 className="font-medium text-gray-900">{application.jobTitle}</h4>
+                          <p className="text-sm text-gray-600">{application.company}</p>
+                          <p className="text-xs text-gray-500">Applied on {application.appliedDate}</p>
+                        </div>
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${application.statusColor}`}>
+                          {application.status}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-              <div className="mt-4">
-                <button
-                  onClick={() => navigate('/candidate/applications')}
-                  className="btn-outline w-full"
-                >
-                  View All Applications
-                </button>
-              </div>
+                  <div className="mt-4">
+                    <button
+                      onClick={() => navigate('/candidate/applications')}
+                      className="btn-outline w-full"
+                    >
+                      View All Applications
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 

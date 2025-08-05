@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  # Development overrides
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    command: npm run dev
+
+  frontend:
+    build:
+      context: ./frontend/smart-recruit-app
+      dockerfile: Dockerfile.dev
+    environment:
+      REACT_APP_API_URL: http://localhost:3001/api
+      REACT_APP_BACKEND_URL: http://localhost:3001
+    volumes:
+      - ./frontend/smart-recruit-app:/app
+      - /app/node_modules
+    command: npm start
+
+  analysis-service:
+    environment:
+      FLASK_ENV: development
+      FLASK_DEBUG: 1
+    volumes:
+      - ./services/analysis-service:/app
+    command: python app.py
+
+  matching-service:
+    environment:
+      FLASK_ENV: development
+      FLASK_DEBUG: 1
+    volumes:
+      - ./services/matching-service:/app
+    command: python app.py
+
+

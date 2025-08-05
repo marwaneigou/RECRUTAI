@@ -216,7 +216,8 @@ const CVViewer = ({ cvSnapshot, className = "" }) => {
         </div>
 
         {/* Projects */}
-        {cvData.projects && cvData.projects.length > 0 && (
+        {cvData.projects && cvData.projects.length > 0 &&
+         cvData.projects.some(project => project.name && project.name.trim() !== '') && (
           <div>
             <h3 className="text-lg font-semibold text-gray-900 flex items-center mb-4">
               <CodeBracketIcon className="h-5 w-5 mr-2 text-blue-600" />
@@ -252,7 +253,8 @@ const CVViewer = ({ cvSnapshot, className = "" }) => {
         )}
 
         {/* Certifications */}
-        {cvData.certifications && cvData.certifications.length > 0 && (
+        {cvData.certifications && cvData.certifications.length > 0 &&
+         cvData.certifications.some(cert => cert.name && cert.name.trim() !== '') && (
           <div>
             <h3 className="text-lg font-semibold text-gray-900 flex items-center mb-4">
               <TrophyIcon className="h-5 w-5 mr-2 text-blue-600" />

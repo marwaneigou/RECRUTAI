@@ -1,3 +1,11 @@
+Server: postgres
+   Username: postgres
+   Password: password123
+   Database: recrutia
+
+👤 Candidate: ahmed.benali@example.com / candidate123
+🏢 Employer: hr@techcorp-solutions.com / employer123
+
 Projet 10 : Plateforme de Mise en Relation Employeurs-Employés avec Analyse
 Automatique des Offres et CVs
 Titre : Plateforme intelligente de mise en relation employeurs-employés avec

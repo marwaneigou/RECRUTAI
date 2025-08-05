@@ -3,6 +3,7 @@ import { UserGroupIcon, EyeIcon, CheckIcon, XMarkIcon, DocumentTextIcon, Envelop
 import api from '../../services/api'
 import toast from 'react-hot-toast'
 import CVModal from '../../components/common/CVModal'
+import EmailTemplateModal from '../../components/employers/EmailTemplateModal'
 
 const CandidatesPage = () => {
   const [applications, setApplications] = useState([])
@@ -12,6 +13,8 @@ const CandidatesPage = () => {
   const [selectedCV, setSelectedCV] = useState(null)
   const [showCoverLetterModal, setShowCoverLetterModal] = useState(false)
   const [selectedCoverLetter, setSelectedCoverLetter] = useState(null)
+  const [showEmailModal, setShowEmailModal] = useState(false)
+  const [emailModalData, setEmailModalData] = useState({ application: null, newStatus: null })
 
   useEffect(() => {
     fetchApplications()
@@ -183,6 +186,14 @@ const CandidatesPage = () => {
   }
 
   const handleStatusChange = async (applicationId, newStatus) => {
+    // Find the application to get candidate details
+    const application = applications.find(app => app.id === applicationId)
+    if (!application) {
+      toast.error('Application not found')
+      return
+    }
+
+    // First update the status
     try {
       console.log('🔄 Updating status:', { applicationId, newStatus })
       const response = await api.put(`/applications/${applicationId}/status`, {
@@ -198,7 +209,17 @@ const CandidatesPage = () => {
         setApplications(prev => prev.map(app =>
           app.id === applicationId ? { ...app, status: newStatus } : app
         ))
-        toast.success('Application status updated successfully')
+
+        // Open email modal for status notification
+        setEmailModalData({
+          application: {
+            ...application,
+            status: newStatus
+          },
+          newStatus
+        })
+        setShowEmailModal(true)
+
         console.log('✅ Status updated successfully in UI')
       } else {
         console.error('Failed to update status - Response:', response)
@@ -209,6 +230,15 @@ const CandidatesPage = () => {
       console.error('Error details:', error.response?.data)
       toast.error('Error updating status. Please try again.')
     }
+  }
+
+  const handleEmailSent = () => {
+    toast.success('Status update email sent successfully!')
+  }
+
+  const handleCloseEmailModal = () => {
+    setShowEmailModal(false)
+    setEmailModalData({ application: null, newStatus: null })
   }
 
 
@@ -422,7 +452,7 @@ const CandidatesPage = () => {
               <div className="bg-white px-6 py-4 border-b border-gray-200">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-medium text-gray-900">
-                    CV - {selectedApplication.candidateName}
+                    CV
                   </h3>
                   <button
                     onClick={() => setShowCVModal(false)}
@@ -653,6 +683,15 @@ const CandidatesPage = () => {
         cvSnapshot={selectedCV?.cvSnapshot}
         candidateName={selectedCV?.candidateName}
         jobTitle={selectedCV?.jobTitle}
+      />
+
+      {/* Email Template Modal */}
+      <EmailTemplateModal
+        isOpen={showEmailModal}
+        onClose={handleCloseEmailModal}
+        application={emailModalData.application}
+        newStatus={emailModalData.newStatus}
+        onEmailSent={handleEmailSent}
       />
     </div>
   )

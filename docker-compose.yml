@@ -1,0 +1,197 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: recrutia-postgres
+    environment:
+      POSTGRES_DB: recrutia
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+    networks:
+      - recrutia-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MongoDB Database
+  mongodb:
+    image: mongo:5.0
+    container_name: recrutia-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+      MONGO_INITDB_DATABASE: recrutia_ai
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - recrutia-network
+    command: mongod --auth
+    healthcheck:
+      test: ["CMD", "mongo", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: recrutia-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - recrutia-network
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Adminer - PostgreSQL Database Management Tool
+  adminer:
+    image: adminer:latest
+    container_name: recrutia-adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    networks:
+      - recrutia-network
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+
+  # Mongo Express - MongoDB Database Management Tool
+  mongo-express:
+    image: mongo-express:latest
+    container_name: recrutia-mongo-express
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    networks:
+      - recrutia-network
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
+      ME_CONFIG_MONGODB_ADMINPASSWORD: password123
+      ME_CONFIG_MONGODB_URL: mongodb://admin:password123@mongodb:27017/
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: admin123
+      ME_CONFIG_MONGODB_SERVER: mongodb
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  # Backend API Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: recrutia-backend
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: postgresql://postgres:password123@postgres:5432/recrutia
+      MONGODB_URI: mongodb://admin:password123@mongodb:27017/recrutia_ai?authSource=admin
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ANALYSIS_SERVICE_URL: http://analysis-service:5002
+      MATCHING_SERVICE_URL: http://matching-service:5001
+      REDIS_URL: redis://redis:6379
+      # SMTP Configuration for email sending
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_SECURE: ${SMTP_SECURE}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL}
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - recrutia-network
+    volumes:
+      - ./uploads:/app/uploads
+
+
+  # Frontend React App
+  frontend:
+    build:
+      context: ./frontend/smart-recruit-app
+      dockerfile: Dockerfile
+    container_name: recrutia-frontend
+    environment:
+      REACT_APP_API_URL: http://localhost:3000/api
+      REACT_APP_BACKEND_URL: http://localhost:3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - recrutia-network
+
+  # AI Analysis Service
+  analysis-service:
+    build:
+      context: ./services/analysis-service
+      dockerfile: Dockerfile
+    container_name: recrutia-analysis-service
+    environment:
+      FLASK_ENV: production
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_MODEL: gpt-4
+      OPENAI_TEMPERATURE: 0.3
+      OPENAI_MAX_TOKENS: 2000
+    ports:
+      - "5002:5002"
+    networks:
+      - recrutia-network
+
+
+  # AI Matching Service
+  matching-service:
+    build:
+      context: ./services/matching-service
+      dockerfile: Dockerfile
+    container_name: recrutia-matching-service
+    environment:
+      FLASK_ENV: production
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_MODEL: gpt-4
+      OPENAI_TEMPERATURE: 0.1
+      OPENAI_MAX_TOKENS: 300
+    ports:
+      - "5001:5001"
+    networks:
+      - recrutia-network
+
+
+
+
+
+networks:
+  recrutia-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  mongodb_data:
+  redis_data:

@@ -1,8 +1,6 @@
 const jwt = require('jsonwebtoken')
-const { PrismaClient } = require('@prisma/client')
 const { logger } = require('../utils/logger')
-
-const prisma = new PrismaClient()
+const { prisma } = require('../config/database')
 
 /**
  * Authentication middleware to verify JWT tokens
@@ -32,6 +30,7 @@ const authenticateToken = async (req, res, next) => {
         uuid: true,
         name: true,
         email: true,
+        phone: true,
         role: true,
         isActive: true,
         emailVerified: true
@@ -186,21 +185,13 @@ const checkOwnership = (userIdParam = 'userId') => {
 }
 
 /**
- * Rate limiting for authentication endpoints
+ * Rate limiting for authentication endpoints - DISABLED
+ * Note: Rate limiting has been disabled for development/testing purposes
  */
-const authRateLimit = require('express-rate-limit')({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // limit each IP to 5 requests per windowMs for auth endpoints
-  message: {
-    success: false,
-    error: {
-      message: 'Too many authentication attempts, please try again later'
-    }
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-  skipSuccessfulRequests: true // don't count successful requests
-})
+const authRateLimit = (req, res, next) => {
+  // Skip rate limiting - just pass through
+  next()
+}
 
 module.exports = {
   authenticateToken,

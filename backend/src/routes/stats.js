@@ -1,9 +1,7 @@
 const express = require('express')
 const router = express.Router()
-const { PrismaClient } = require('@prisma/client')
 const { authenticateToken } = require('../middleware/auth')
-
-const prisma = new PrismaClient()
+const { prisma } = require('../config/database')
 
 // Get candidate statistics
 router.get('/candidate', authenticateToken, async (req, res) => {
@@ -46,18 +44,9 @@ router.get('/candidate', authenticateToken, async (req, res) => {
       where: { isActive: true }
     })
 
-    // Calculate profile views (estimate based on reviewed applications)
-    const reviewedApplications = await prisma.application.count({
-      where: { 
-        candidateId: candidate.id,
-        status: 'reviewed'
-      }
-    })
-
     const stats = {
       applicationsSent: applicationsCount,
       jobMatches: totalActiveJobs,
-      profileViews: reviewedApplications * 3, // Estimate: 3 views per reviewed application
       interviews: applicationsByStatus.find(s => s.status === 'interviewed')?._count?.status || 0,
       pending: applicationsByStatus.find(s => s.status === 'pending')?._count?.status || 0,
       reviewed: applicationsByStatus.find(s => s.status === 'reviewed')?._count?.status || 0,
@@ -156,7 +145,6 @@ router.get('/employer', authenticateToken, async (req, res) => {
       activeJobs,
       totalApplications,
       pendingApplications: applicationsByStatus.find(s => s.status === 'pending')?._count?.status || 0,
-      reviewedApplications: applicationsByStatus.find(s => s.status === 'reviewed')?._count?.status || 0,
       interviewApplications: applicationsByStatus.find(s => s.status === 'interviewed')?._count?.status || 0,
       acceptedApplications: applicationsByStatus.find(s => s.status === 'accepted')?._count?.status || 0,
       rejectedApplications: applicationsByStatus.find(s => s.status === 'rejected')?._count?.status || 0,

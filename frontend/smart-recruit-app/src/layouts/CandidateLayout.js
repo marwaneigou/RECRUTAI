@@ -23,7 +23,6 @@ const CandidateLayout = ({ children }) => {
     { name: 'Job Search', href: '/candidate/jobs', icon: MagnifyingGlassIcon },
     { name: 'Applications', href: '/candidate/applications', icon: DocumentTextIcon },
     { name: 'CV Builder', href: '/candidate/cv-builder', icon: DocumentTextIcon },
-    { name: 'Settings', href: '/candidate/settings', icon: Cog6ToothIcon },
   ]
 
   const handleLogout = async () => {

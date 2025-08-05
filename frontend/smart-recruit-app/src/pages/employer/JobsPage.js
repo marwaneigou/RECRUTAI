@@ -47,8 +47,8 @@ const JobsPage = () => {
         type: job.employmentType?.replace('_', ' ').toLowerCase() || 'full-time',
         salary: formatSalary(job.salaryMin, job.salaryMax, job.currency),
         status: job.isActive ? 'Active' : 'Inactive',
-        applications: 0, // Will be updated when applications API is ready
-        views: 0, // Will be updated when analytics are available
+        applications: job.applicationCount || 0, // Use applicationCount from API
+        views: job.views || 0, // Use views from API
         postedDate: new Date(job.createdAt).toISOString().split('T')[0],
         description: job.description,
         requirements: job.requirements,
@@ -218,17 +218,6 @@ const JobsPage = () => {
         </div>
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center">
-            <EyeIcon className="h-8 w-8 text-purple-600 mr-4" />
-            <div>
-              <p className="text-sm font-medium text-gray-500">Total Views</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                {jobs.reduce((sum, job) => sum + job.views, 0)}
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
             <CalendarIcon className="h-8 w-8 text-yellow-600 mr-4" />
             <div>
               <p className="text-sm font-medium text-gray-500">Active Jobs</p>
@@ -312,7 +301,6 @@ const JobsPage = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <div className="flex items-center">
                       <span className="font-medium">{job.applications}</span>
-                      <span className="ml-2 text-gray-500">({job.views} views)</span>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">

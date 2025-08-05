@@ -16,11 +16,16 @@ const EmployerDashboard = () => {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [stats, setStats] = useState({
-    companyName: 'Loading...',
+    companyName: user?.name || 'Your Company',
     activeJobs: 0,
     totalApplications: 0,
     pendingApplications: 0,
-    totalJobs: 0
+    totalJobs: 0,
+    reviewedApplications: 0,
+    interviewApplications: 0,
+    acceptedApplications: 0,
+    rejectedApplications: 0,
+    recentApplications: 0
   })
   const [loading, setLoading] = useState(true)
   const [forceUpdate, setForceUpdate] = useState(0)

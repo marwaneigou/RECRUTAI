@@ -13,9 +13,9 @@ import RegisterPage from './pages/auth/RegisterPage'
 // Candidate Pages
 import CandidateDashboardPage from './pages/candidate/DashboardPage'
 import JobSearchPage from './pages/candidate/JobSearchPage'
+import JobDetailsPage from './pages/candidate/JobDetailsPage'
 import ApplicationsPage from './pages/candidate/ApplicationsPage'
 import CVBuilderPage from './pages/candidate/CVBuilderPage'
-import CandidateSettingsPage from './pages/candidate/SettingsPage'
 
 // Employer Pages
 import EmployerDashboard from './components/dashboards/EmployerDashboard'
@@ -76,9 +76,9 @@ const AppContent = () => {
               <Routes>
                 <Route path="dashboard" element={<CandidateDashboardPage />} />
                 <Route path="jobs" element={<JobSearchPage />} />
+                <Route path="jobs/:jobId" element={<JobDetailsPage />} />
                 <Route path="applications" element={<ApplicationsPage />} />
                 <Route path="cv-builder" element={<CVBuilderPage />} />
-                <Route path="settings" element={<CandidateSettingsPage />} />
                 <Route path="" element={<Navigate to="dashboard" replace />} />
               </Routes>
             </CandidateLayout>

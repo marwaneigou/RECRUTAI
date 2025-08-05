@@ -146,42 +146,36 @@ const CVBuilder = () => {
 
         console.log('Setting CV data:', cvDataFromDb);
 
-        // Map the API response structure to the frontend structure
-        const personalInfo = cvDataFromDb.personalInfo || {};
-
-        console.log('Personal info from API:', personalInfo);
         console.log('Full CV data from API:', cvDataFromDb);
-        console.log('Skills from API:', cvDataFromDb.skills);
-        console.log('Experience from API:', cvDataFromDb.experience);
-        console.log('Education from API:', cvDataFromDb.education);
         console.log('Professional Summary:', cvDataFromDb.professionalSummary);
         console.log('Languages:', cvDataFromDb.languages);
+        console.log('Work Experience:', cvDataFromDb.workExperience);
+        console.log('Education:', cvDataFromDb.education);
         console.log('Projects:', cvDataFromDb.projects);
         console.log('Certifications:', cvDataFromDb.certifications);
         console.log('Selected Template:', cvDataFromDb.selectedTemplate);
 
-        // Prepare data for setCvData
+        // Map the API response structure to the frontend structure
+        // The backend now returns data directly in the root object, not nested in personalInfo
         const newCvData = {
-          firstName: personalInfo.firstName || '',
-          lastName: personalInfo.lastName || '',
-          email: personalInfo.email || user?.email || '',
-          phone: personalInfo.phone || '',
-          address: personalInfo.address || '',
-          city: personalInfo.city || '',
-          country: personalInfo.country || '',
-          linkedinUrl: personalInfo.linkedin || '',
-          githubUrl: personalInfo.github || '',
-          portfolioUrl: personalInfo.website || '',
+          firstName: cvDataFromDb.firstName || '',
+          lastName: cvDataFromDb.lastName || '',
+          email: cvDataFromDb.email || user?.email || '',
+          phone: cvDataFromDb.phone || '',
+          address: cvDataFromDb.address || '',
+          city: cvDataFromDb.city || '',
+          country: cvDataFromDb.country || '',
+          linkedinUrl: cvDataFromDb.linkedinUrl || '',
+          githubUrl: cvDataFromDb.githubUrl || '',
+          portfolioUrl: cvDataFromDb.portfolioUrl || '',
           professionalSummary: cvDataFromDb.professionalSummary || '',
-          technicalSkills: cvDataFromDb.skills?.filter(s => ['Programming', 'Frontend', 'Backend'].includes(s.category))
-            .map(s => s.name).join(', ') || '',
-          softSkills: cvDataFromDb.skills?.filter(s => s.category === 'Soft')
-            .map(s => s.name).join(', ') || '',
+          technicalSkills: cvDataFromDb.technicalSkills || '',
+          softSkills: cvDataFromDb.softSkills || '',
           languages: cvDataFromDb.languages || '',
-          workExperience: Array.isArray(cvDataFromDb.experience) && cvDataFromDb.experience.length > 0
-            ? cvDataFromDb.experience.map(exp => ({
+          workExperience: Array.isArray(cvDataFromDb.workExperience) && cvDataFromDb.workExperience.length > 0
+            ? cvDataFromDb.workExperience.map(exp => ({
                 id: exp.id || Date.now(),
-                jobTitle: exp.title || '',
+                jobTitle: exp.jobTitle || '',
                 company: exp.company || '',
                 location: exp.location || '',
                 startDate: exp.startDate || '',
@@ -196,7 +190,7 @@ const CVBuilder = () => {
                 degree: edu.degree || '',
                 institution: edu.institution || '',
                 location: edu.location || '',
-                graduationDate: edu.endDate || '',
+                graduationDate: edu.graduationDate || '',
                 gpa: edu.gpa || '',
                 description: edu.description || ''
               }))
@@ -256,8 +250,19 @@ const CVBuilder = () => {
 
   const saveCvData = async () => {
     try {
+      // Filter out empty projects and certifications
+      const filteredProjects = cvData.projects.filter(project =>
+        project.name && project.name.trim() !== ''
+      );
+
+      const filteredCertifications = cvData.certifications.filter(cert =>
+        cert.name && cert.name.trim() !== ''
+      );
+
       const dataToSave = {
         ...cvData,
+        projects: filteredProjects,
+        certifications: filteredCertifications,
         selectedTemplate,
         isComplete: isFormComplete()
       };

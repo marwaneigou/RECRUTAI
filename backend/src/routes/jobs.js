@@ -1,12 +1,10 @@
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
 const { authenticateToken, authorizeRoles } = require('../middleware/auth');
 const { body, validationResult } = require('express-validator');
 const { logger } = require('../utils/logger');
-const { mongoService } = require('../config/database');
+const { prisma, mongoService } = require('../config/database');
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // Get all jobs with filtering
 router.get('/', async (req, res) => {
@@ -77,10 +75,23 @@ router.get('/', async (req, res) => {
       prisma.job.count({ where })
     ]);
 
+    // Add application counts to each job
+    const jobsWithStats = await Promise.all(jobs.map(async (job) => {
+      const applicationCount = await prisma.application.count({
+        where: { jobId: job.id }
+      });
+
+      return {
+        ...job,
+        applicationCount,
+        views: 0 // Placeholder for views - can be implemented later
+      };
+    }));
+
     res.json({
       success: true,
       data: {
-        jobs,
+        jobs: jobsWithStats,
         pagination: {
           page: parseInt(page),
           limit: parseInt(limit),
@@ -345,11 +356,19 @@ router.get('/my-jobs', authenticateToken, authorizeRoles(['employer']), async (r
 
     console.log('Found jobs:', jobs.length);
 
-    // Add placeholder stats
-    const jobsWithStats = jobs.map(job => ({
-      ...job,
-      applicationCount: 0,
-      views: 0
+    // Get application counts for each job
+    const jobsWithStats = await Promise.all(jobs.map(async (job) => {
+      const applicationCount = await prisma.application.count({
+        where: { jobId: job.id }
+      });
+
+      console.log(`Job ${job.id} (${job.title}) has ${applicationCount} applications`);
+
+      return {
+        ...job,
+        applicationCount,
+        views: 0 // Placeholder for views - can be implemented later
+      };
     }));
 
     res.json({
@@ -527,23 +546,23 @@ router.put('/:id',
 
       if (updateData.employmentType) {
         const employmentTypeMap = {
-          'full-time': 'FULL_TIME',
-          'part-time': 'PART_TIME',
-          'contract': 'CONTRACT',
-          'internship': 'INTERNSHIP',
-          'freelance': 'FREELANCE'
+          'full-time': 'full_time',
+          'part-time': 'part_time',
+          'contract': 'contract',
+          'internship': 'internship',
+          'freelance': 'freelance'
         };
         updateData.employmentType = employmentTypeMap[updateData.employmentType] || updateData.employmentType;
       }
 
       if (updateData.experienceLevel) {
         const experienceLevelMap = {
-          'entry': 'ENTRY',
-          'junior': 'JUNIOR',
-          'mid': 'MID',
-          'senior': 'SENIOR',
-          'lead': 'LEAD',
-          'executive': 'EXECUTIVE'
+          'entry': 'entry',
+          'junior': 'junior',
+          'mid': 'mid',
+          'senior': 'senior',
+          'lead': 'lead',
+          'executive': 'executive'
         };
         updateData.experienceLevel = experienceLevelMap[updateData.experienceLevel] || updateData.experienceLevel;
       }
