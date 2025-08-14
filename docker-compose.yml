@@ -109,6 +109,7 @@ services:
       ANALYSIS_SERVICE_URL: http://analysis-service:5002
       MATCHING_SERVICE_URL: http://matching-service:5001
       REDIS_URL: redis://redis:6379
+      CORS_ORIGIN: http://localhost:3000,http://192.168.1.105:8081,http://localhost:8081
       # SMTP Configuration for email sending
       SMTP_HOST: ${SMTP_HOST}
       SMTP_PORT: ${SMTP_PORT}

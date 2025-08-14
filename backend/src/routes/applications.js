@@ -62,7 +62,8 @@ router.get('/', authenticateToken, async (req, res) => {
           if (app.coverLetterId) {
             try {
               const coverLetterDoc = await mongoService.getCoverLetterById(app.coverLetterId)
-              coverLetter = coverLetterDoc
+              // Extract just the content if it's an object, otherwise use as is
+              coverLetter = coverLetterDoc?.content || coverLetterDoc || null
             } catch (error) {
               console.error('Error fetching cover letter:', error)
             }
@@ -72,7 +73,8 @@ router.get('/', authenticateToken, async (req, res) => {
           if (app.cvSnapshotId) {
             try {
               const cvSnapshotDoc = await mongoService.getCvSnapshotById(app.cvSnapshotId)
-              cvSnapshot = cvSnapshotDoc
+              // Extract just the cvData from the MongoDB document
+              cvSnapshot = cvSnapshotDoc?.cvData || null
             } catch (error) {
               console.error('Error fetching CV snapshot:', error)
             }
@@ -167,7 +169,8 @@ router.get('/', authenticateToken, async (req, res) => {
           if (app.coverLetterId) {
             try {
               const coverLetterDoc = await mongoService.getCoverLetterById(app.coverLetterId)
-              coverLetter = coverLetterDoc
+              // Extract just the content if it's an object, otherwise use as is
+              coverLetter = coverLetterDoc?.content || coverLetterDoc || null
             } catch (error) {
               console.error('Error fetching cover letter:', error)
             }
@@ -177,7 +180,8 @@ router.get('/', authenticateToken, async (req, res) => {
           if (app.cvSnapshotId) {
             try {
               const cvSnapshotDoc = await mongoService.getCvSnapshotById(app.cvSnapshotId)
-              cvSnapshot = cvSnapshotDoc
+              // Extract just the cvData from the MongoDB document
+              cvSnapshot = cvSnapshotDoc?.cvData || null
             } catch (error) {
               console.error('Error fetching CV snapshot:', error)
             }

@@ -114,7 +114,16 @@ const Applications = () => {
   };
 
   const handleViewCV = (application) => {
-    setSelectedCV(application);
+    // Handle both old and new CV snapshot structures
+    const cvSnapshotData = application.cvSnapshot?.cvData || application.cvSnapshot;
+    console.log('Viewing CV for application:', application.id);
+    console.log('CV snapshot structure:', application.cvSnapshot);
+    console.log('CV data to display:', cvSnapshotData);
+
+    setSelectedCV({
+      ...application,
+      cvSnapshot: cvSnapshotData
+    });
     setShowCVModal(true);
   };
 
@@ -124,7 +133,16 @@ const Applications = () => {
   };
 
   const handleViewCoverLetter = (application) => {
-    setSelectedCoverLetter(application);
+    // Handle both old and new cover letter structures
+    const coverLetterData = application.coverLetter?.content || application.coverLetter;
+    console.log('Viewing cover letter for application:', application.id);
+    console.log('Cover letter structure:', application.coverLetter);
+    console.log('Cover letter content to display:', coverLetterData);
+
+    setSelectedCoverLetter({
+      ...application,
+      coverLetter: coverLetterData
+    });
     setShowCoverLetterModal(true);
   };
 
@@ -383,7 +401,7 @@ const Applications = () => {
                     >
                       <DocumentTextIcon className="h-5 w-5" />
                     </button>
-                    {application.coverLetter?.content && (
+                    {application.coverLetter && (
                       <button
                         onClick={() => handleViewCoverLetter(application)}
                         className="p-2 text-gray-400 hover:text-purple-600 transition-colors"
@@ -506,7 +524,7 @@ const Applications = () => {
                   <div>
                     <div className="bg-gray-50 p-4 rounded-lg border">
                       <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">
-                        {selectedCoverLetter.coverLetter?.content || 'No cover letter content available'}
+                        {selectedCoverLetter.coverLetter || 'No cover letter content available'}
                       </p>
                     </div>
                   </div>
@@ -516,9 +534,9 @@ const Applications = () => {
                     <div>
                       <p className="text-sm font-medium text-gray-500">Type</p>
                       <p className="text-sm text-gray-900">
-                        {selectedCoverLetter.coverLetter?.type === 'user_written' ? 'User Written' :
-                         selectedCoverLetter.coverLetter?.type === 'ai_generated' ? 'AI Generated' :
-                         'Unknown'}
+                        {typeof selectedCoverLetter.coverLetter === 'object' && selectedCoverLetter.coverLetter?.type === 'ai_generated'
+                          ? 'AI Generated'
+                          : 'User Written'}
                       </p>
                     </div>
                     <div>

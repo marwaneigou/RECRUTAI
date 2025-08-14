@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "RecrutIA",
+    "slug": "recrutia",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#3B82F6"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.recrutia.app"
+    },
+    "android": {
+      "package": "com.recrutia.app"
+    },
+    "web": {
+    },
+    "plugins": [
+      "expo-secure-store"
+    ],
+    "sdkVersion": "53.0.0"
+  }
+}

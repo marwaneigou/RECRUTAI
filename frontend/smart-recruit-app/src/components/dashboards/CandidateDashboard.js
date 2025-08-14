@@ -171,12 +171,19 @@ const CandidateDashboard = () => {
       console.log('📋 Extracted job recommendations:', recommendationsData) // Debug log
 
       // Transform the data to match the expected format
-      const transformedRecommendations = recommendationsData.map(rec => ({
-        id: rec.jobId,
-        title: rec.title,
-        company: rec.company,
-        location: rec.location,
-        matchScore: rec.matchScore,
+      console.log('🔄 Starting transformation of recommendations:', recommendationsData.length, 'items'); // Debug log
+      console.log('🔄 Raw recommendations data:', recommendationsData); // Debug log
+
+      const transformedRecommendations = recommendationsData.map((rec, index) => {
+        console.log(`🔍 Processing recommendation ${index + 1}:`, rec); // Debug log
+        console.log(`🆔 Job ID: ${rec.jobId}, Title: ${rec.title}`); // Debug log
+
+        const transformedJob = {
+          id: rec.jobId,
+          title: rec.title,
+          company: rec.company,
+          location: rec.location,
+          matchScore: rec.matchScore,
         salary: rec.salaryMin && rec.salaryMax
           ? `${rec.salaryMin}k - ${rec.salaryMax}k ${rec.currency || 'EUR'}`
           : 'Salary not specified',
@@ -195,10 +202,28 @@ const CandidateDashboard = () => {
         logoUrl: rec.logoUrl,
         reasoning: rec.reasoning,
         missingSkills: rec.missingSkills || []
-      }))
+        };
+
+        console.log(`✅ Transformed job ${index + 1}:`, transformedJob); // Debug log
+        console.log(`🆔 Transformed job ID: ${transformedJob.id}, Type: ${typeof transformedJob.id}`); // Debug log
+
+        return transformedJob;
+      });
+
+      // Validate transformation
+      const invalidJobs = transformedRecommendations.filter(job => !job.id);
+      if (invalidJobs.length > 0) {
+        console.error('❌ Found jobs with undefined IDs:', invalidJobs);
+      }
 
       setJobRecommendations(transformedRecommendations)
       console.log('✅ Job recommendations successfully set:', transformedRecommendations) // Debug log
+      console.log('🔍 First job ID check:', transformedRecommendations[0]?.id); // Debug log
+
+      // Additional validation
+      transformedRecommendations.forEach((job, index) => {
+        console.log(`🔍 Final job ${index + 1} - ID: ${job.id}, Title: ${job.title}`);
+      });
 
     } catch (error) {
       console.error('❌ Error fetching job recommendations:', error)
@@ -260,6 +285,16 @@ const CandidateDashboard = () => {
 
 
   const handleViewJobDetails = async (job) => {
+    console.log('🔍 Viewing job details for:', job); // Debug log
+    console.log('🆔 Job ID:', job.id, 'Type:', typeof job.id); // Debug log
+
+    // Validate job ID
+    if (!job.id) {
+      console.error('❌ Job ID is undefined or null:', job);
+      toast.error('Invalid job ID. Please try refreshing the page.');
+      return;
+    }
+
     // Track interaction
     try {
       await aiAPI.trackRecommendationInteraction(job.id, 'view', job.matchScore, {
@@ -272,12 +307,24 @@ const CandidateDashboard = () => {
     }
 
     // Navigate to job details page
+    console.log('🚀 Navigating to:', `/candidate/jobs/${job.id}`); // Debug log
+
+    // Temporary hardcoded test to see if navigation works
+    if (!job.id) {
+      console.error('❌ Job ID is undefined, using hardcoded ID 1 for testing');
+      navigate(`/candidate/jobs/1`);
+      return;
+    }
+
     navigate(`/candidate/jobs/${job.id}`)
   }
 
   const handleApplyToJob = async (jobId) => {
+    console.log('🚀 Applying to job with ID:', jobId, 'Type:', typeof jobId); // Debug log
+
     // Find the job to get match score
     const job = jobRecommendations.find(j => j.id === jobId)
+    console.log('🔍 Found job for application:', job); // Debug log
 
     // Track interaction
     try {
@@ -291,6 +338,15 @@ const CandidateDashboard = () => {
     }
 
     // Navigate to job details page with apply intent
+    console.log('🚀 Navigating to apply:', `/candidate/jobs/${jobId}?apply=true`); // Debug log
+
+    // Temporary hardcoded test to see if navigation works
+    if (!jobId) {
+      console.error('❌ Job ID is undefined, using hardcoded ID 1 for testing');
+      navigate(`/candidate/jobs/1?apply=true`);
+      return;
+    }
+
     navigate(`/candidate/jobs/${jobId}?apply=true`)
   }
 
@@ -470,7 +526,11 @@ const CandidateDashboard = () => {
                 // Job recommendations
                 <>
                   <div className="space-y-4">
-                    {jobRecommendations.map((job) => (
+                    {jobRecommendations.map((job) => {
+                      console.log('🎯 Rendering job card:', job); // Debug log
+                      console.log('🆔 Job ID in card:', job.id, 'Type:', typeof job.id); // Debug log
+
+                      return (
                       <div key={job.id} className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 transition-colors">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
@@ -504,13 +564,19 @@ const CandidateDashboard = () => {
                         <div className="mt-3 flex items-center justify-between">
                           <div className="flex space-x-2">
                             <button
-                              onClick={() => handleApplyToJob(job.id)}
+                              onClick={() => {
+                                console.log('🚀 Apply button clicked - job.id:', job.id, 'job:', job);
+                                handleApplyToJob(job.id);
+                              }}
                               className="btn-primary text-xs px-3 py-1"
                             >
                               Apply Now
                             </button>
                             <button
-                              onClick={() => handleViewJobDetails(job)}
+                              onClick={() => {
+                                console.log('🔍 View Details button clicked - job:', job);
+                                handleViewJobDetails(job);
+                              }}
                               className="btn-outline text-xs px-3 py-1"
                             >
                               View Details
@@ -543,7 +609,8 @@ const CandidateDashboard = () => {
                           </div>
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                   <div className="mt-4 flex space-x-3">
                     <button

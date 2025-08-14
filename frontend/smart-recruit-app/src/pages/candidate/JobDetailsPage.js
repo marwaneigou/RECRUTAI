@@ -24,6 +24,11 @@ const JobDetailsPage = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { user } = useAuth()
+
+  // Debug logging
+  console.log('🔍 JobDetailsPage - jobId from useParams():', jobId, 'Type:', typeof jobId);
+  console.log('🔍 JobDetailsPage - all params:', useParams());
+  console.log('🔍 JobDetailsPage - current URL:', window.location.href);
   const [job, setJob] = useState(null)
   const [loading, setLoading] = useState(true)
   const [showApplicationModal, setShowApplicationModal] = useState(false)
@@ -46,6 +51,9 @@ const JobDetailsPage = () => {
   const fetchJobDetails = async () => {
     try {
       setLoading(true)
+      console.log('🚀 Fetching job details for jobId:', jobId, 'Type:', typeof jobId);
+      console.log('🚀 API call URL:', `/jobs/${jobId}`);
+
       const response = await api.get(`/jobs/${jobId}`)
       
       if (response.success) {
@@ -148,12 +156,26 @@ const JobDetailsPage = () => {
     return (
       <div className="text-center py-12">
         <h2 className="text-2xl font-bold text-gray-900">Job not found</h2>
-        <button 
-          onClick={() => navigate('/candidate/jobs')}
-          className="mt-4 text-blue-600 hover:text-blue-800"
-        >
-          Back to Job Search
-        </button>
+        <div className="mt-4 space-x-4">
+          <button
+            onClick={() => navigate(-1)}
+            className="text-gray-600 hover:text-gray-800 transition-colors"
+          >
+            ← Back
+          </button>
+          <button
+            onClick={() => navigate('/candidate/dashboard')}
+            className="text-blue-600 hover:text-blue-800 transition-colors"
+          >
+            Dashboard
+          </button>
+          <button
+            onClick={() => navigate('/candidate/jobs')}
+            className="text-blue-600 hover:text-blue-800 transition-colors"
+          >
+            Job Search
+          </button>
+        </div>
       </div>
     )
   }
@@ -162,13 +184,31 @@ const JobDetailsPage = () => {
     <div className="max-w-4xl mx-auto">
       {/* Header */}
       <div className="mb-6">
-        <button
-          onClick={() => navigate('/candidate/jobs')}
-          className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
-        >
-          <ArrowLeftIcon className="h-5 w-5 mr-2" />
-          Back to Job Search
-        </button>
+        <div className="flex items-center space-x-4 mb-4">
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+          >
+            <ArrowLeftIcon className="h-5 w-5 mr-2" />
+            Back
+          </button>
+
+          <div className="text-gray-300">|</div>
+
+          <button
+            onClick={() => navigate('/candidate/dashboard')}
+            className="flex items-center text-blue-600 hover:text-blue-800 transition-colors"
+          >
+            Dashboard
+          </button>
+
+          <button
+            onClick={() => navigate('/candidate/jobs')}
+            className="flex items-center text-blue-600 hover:text-blue-800 transition-colors"
+          >
+            Job Search
+          </button>
+        </div>
         
         <div className="bg-white rounded-lg shadow-lg p-6">
           <div className="flex items-start justify-between">
